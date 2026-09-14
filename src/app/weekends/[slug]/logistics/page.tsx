@@ -1,7 +1,8 @@
 "use client";
 
-import { assessFood, evaluateReadiness, formatDuration, headcount } from "@/lib/engine";
+import { assessFood, evaluateReadiness, formatDuration, headcount, parseClock } from "@/lib/engine";
 import type { Accommodation, AccommodationType, DecisionTopic, FoodPlan, SundayActivity } from "@/lib/types";
+import { nl } from "@/lib/labels";
 import { newId } from "@/store/store";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
 import {
@@ -13,16 +14,21 @@ import {
   Select,
   StatusBadge,
   TextInput,
+  toneForStatus,
+  type Tone,
 } from "@/components/ui";
+import { CountUp, ScoreScale, StackedBar, TimeWindowBar, type TimeSpan } from "@/components/viz";
 
-const ACCOMMODATION_OPTIONS: { value: AccommodationType; label: string }[] = [
-  { value: "hotel", label: "Hotel" },
-  { value: "hostel", label: "Hostel" },
-  { value: "holidayHome", label: "Vakantiehuis" },
-  { value: "camping", label: "Camping" },
-  { value: "friendsFamily", label: "Vrienden / familie" },
-  { value: "unknown", label: "Onbekend" },
+const ACCOMMODATION_TYPES: AccommodationType[] = [
+  "hotel",
+  "hostel",
+  "holidayHome",
+  "camping",
+  "friendsFamily",
+  "unknown",
 ];
+
+const ACCOMMODATION_OPTIONS = ACCOMMODATION_TYPES.map((t) => ({ value: t, label: nl(t) }));
 
 function AccessLine({ label, value }: { label: string; value: string }) {
   return (
@@ -63,15 +69,45 @@ export default function LogisticsPage() {
   const confirmDinnerReservation = () => {
     const count = hc.dinner.going;
     setDinner({ reserved: true, reservedCount: count });
-    logDecision("dinner", `Reservering bevestigd bij ${dinner.location || "dinerlocatie"} voor ${count} personen.`);
+    logDecision("dinner", `Reservering bevestigd bij ${dinner.location || "eetlocatie"} voor ${count} personen.`);
   };
+
+  /* ---------- Avondtijdlijn: eten vs. keukensluiting ---------- */
+  const dinnerMin = parseClock(dinner.time);
+  const kitchenRaw = parseClock(dinner.kitchenClosesAt);
+  const kitchenMin =
+    dinnerMin !== null && kitchenRaw !== null && kitchenRaw < dinnerMin ? kitchenRaw + 1440 : kitchenRaw;
+  const foodTone: Tone = toneForStatus(food.status);
+  const spans: TimeSpan[] = [];
+  if (dinnerMin !== null) {
+    if (dinner.travelMin > 0)
+      spans.push({ label: `Reis ${dinner.travelMin}m`, fromMin: dinnerMin - dinner.travelMin, toMin: dinnerMin, tone: "navy" });
+    spans.push({
+      label: `Eten ${formatDuration(dinner.durationMin)}`,
+      fromMin: dinnerMin,
+      toMin: dinnerMin + Math.max(15, dinner.durationMin),
+      tone: foodTone,
+    });
+    if (dinner.beerCanStartHere)
+      spans.push({
+        label: "BZT",
+        fromMin: dinnerMin + Math.max(15, dinner.durationMin),
+        toMin: 26 * 60,
+        tone: "go",
+        hatched: true,
+      });
+  }
+  const markers =
+    kitchenMin !== null ? [{ atMin: kitchenMin, label: "keuken dicht", tone: "nogo" as Tone }] : [];
+
+  const bedsMax = Math.max(1, acc.bedsProvided, hc.overnight.going);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="erp-label">Module L-01 · Verblijf &amp; eten</div>
-          <h2 className="text-base font-bold tracking-tight text-navy">STAY &amp; FOOD CONTROL</h2>
+          <h2 className="text-base font-bold tracking-tight text-navy">SLAPEN &amp; ETEN</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {["accommodation", "beds", "access", "dinner"].map((k) => {
@@ -87,37 +123,52 @@ export default function LogisticsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* ---------------- Accommodation ---------------- */}
+        {/* ---------------- Accommodatie ---------------- */}
         <Card
-          title="ACCOMMODATION"
+          title="ACCOMMODATIE"
           eyebrow="Slaapplaats"
-          className="lg:col-span-2"
+          className="lg:col-span-2 rise rise-1"
           actions={<StatusBadge status={check("accommodation")?.status ?? "UNKNOWN"} />}
         >
+          <div className="mb-3 rounded-[6px] border border-line bg-sunken px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="erp-label">Bedden vs. overnachters</span>
+              <span className="erp-mono text-[12px]">
+                <CountUp value={acc.bedsProvided} /> bedden · <CountUp value={hc.overnight.going} /> overnachters
+              </span>
+            </div>
+            <div className="mt-1.5 space-y-1.5">
+              <ScoreScale value={acc.bedsProvided} max={bedsMax} tone="navy" ticks={1} height={7} />
+              <ScoreScale
+                value={hc.overnight.going}
+                max={bedsMax}
+                tone={acc.ownShelterRequired ? "unknown" : acc.bedsProvided >= hc.overnight.going ? "go" : "nogo"}
+                ticks={1}
+                height={7}
+              />
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Naam">
               <TextInput value={acc.name} onChange={(v) => setAcc({ name: v })} placeholder="Hostel / camping / huis" />
             </Field>
             <Field label="Type">
-              <Select
-                value={acc.type}
-                onChange={(v) => setAcc({ type: v })}
-                options={ACCOMMODATION_OPTIONS}
-              />
+              <Select value={acc.type} onChange={(v) => setAcc({ type: v })} options={ACCOMMODATION_OPTIONS} />
             </Field>
             <Field label="Adres" className="sm:col-span-2">
               <TextInput value={acc.address} onChange={(v) => setAcc({ address: v })} placeholder="Straat, plaats" />
             </Field>
-            <Field label="Bedden geleverd" hint="bedsProvided — telt tegen het aantal overnachters.">
+            <Field label="Bedden geleverd" hint="Telt tegen het aantal overnachters.">
               <NumberInput value={acc.bedsProvided} onChange={(v) => setAcc({ bedsProvided: v })} />
             </Field>
             <Field label="Reistijd vanaf wedstrijdlocatie (min)">
               <NumberInput value={acc.travelFromVenueMin} onChange={(v) => setAcc({ travelFromVenueMin: v })} />
             </Field>
-            <Field label="Check-in vanaf (HH:MM)">
+            <Field label="Check-in vanaf (UU:MM)">
               <TextInput value={acc.checkInFrom} onChange={(v) => setAcc({ checkInFrom: v })} placeholder="15:00" />
             </Field>
-            <Field label="Check-in tot (HH:MM)">
+            <Field label="Check-in tot (UU:MM)">
               <TextInput value={acc.checkInUntil} onChange={(v) => setAcc({ checkInUntil: v })} placeholder="22:00" />
             </Field>
             <Field label="Toegangscode / instructie">
@@ -157,7 +208,7 @@ export default function LogisticsPage() {
               label="Eigen slaapplek vereist"
             />
             <span className="text-[11px] text-faint">
-              Tent zelf regelen = geen bed = FAIL op Beds.
+              Zelf een tent regelen = geen bed = {nl("FAIL")} op {check("beds")?.label ?? "bedden"}.
             </span>
           </div>
 
@@ -178,25 +229,31 @@ export default function LogisticsPage() {
           </div>
         </Card>
 
-        {/* ---------------- Access summary ---------------- */}
-        <Card title="ACCESS DETAILS" eyebrow="Runbook-uitsnede" actions={<StatusBadge status={check("access")?.status ?? "UNKNOWN"} />}>
-          <AccessLine label="Accommodation" value={acc.name ? `${acc.name}${acc.address ? `, ${acc.address}` : ""}` : ""} />
-          <AccessLine label="Gate/access code" value={acc.accessCode} />
+        {/* ---------------- Toegangsgegevens ---------------- */}
+        <Card
+          title="TOEGANGSGEGEVENS"
+          eyebrow="Uitsnede draaiboek"
+          actions={<StatusBadge status={check("access")?.status ?? "UNKNOWN"} />}
+          className="rise rise-2"
+        >
+          <AccessLine label="Accommodatie" value={acc.name ? `${acc.name}${acc.address ? `, ${acc.address}` : ""}` : ""} />
+          <AccessLine label="Toegangscode" value={acc.accessCode} />
           <AccessLine label="Contact" value={acc.contact} />
           <AccessLine
             label="Check-in"
             value={acc.checkInFrom || acc.checkInUntil ? `${acc.checkInFrom || "?"}–${acc.checkInUntil || "?"}` : ""}
           />
           <div className="erp-mono mt-2 text-[11px] leading-snug text-faint">
-            Read-only weergave. Dezelfde regels verschijnen in de runbook onder ACCESS.
+            Alleen-lezen. Dezelfde regels staan in het draaiboek onder {nl("access")}.
           </div>
         </Card>
       </div>
 
-      {/* ---------------- Food control ---------------- */}
+      {/* ---------------- Etencontrole ---------------- */}
       <Card
-        title="FOOD CONTROL"
+        title="ETENCONTROLE"
         eyebrow="Zaterdagavond"
+        className="rise rise-3"
         actions={
           <>
             <StatusBadge status={food.status} />
@@ -212,8 +269,29 @@ export default function LogisticsPage() {
         {!dinner.known && (
           <div className="mt-3">
             <Callout tone="nogo" title="Open punt">
-              &ldquo;Wat eten we eigenlijk?&rdquo; staat nog open — ernstige readiness warning.
+              &ldquo;Wat eten we eigenlijk?&rdquo; staat nog open — zware waarschuwing voor de gereedheid.
             </Callout>
+          </div>
+        )}
+
+        {dinnerMin !== null && (
+          <div className="mt-3 rounded-[6px] border border-line bg-sunken px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="erp-label">Avondvenster</span>
+              <span className="erp-mono text-[11.5px]">
+                Keukenbuffer{" "}
+                {food.kitchenBufferMin === null ? (
+                  "—"
+                ) : (
+                  <span className={food.kitchenBufferMin < 45 ? "font-bold text-nogo" : "font-bold text-go"}>
+                    {formatDuration(food.kitchenBufferMin)}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="mt-2">
+              <TimeWindowBar spans={spans} markers={markers} />
+            </div>
           </div>
         )}
 
@@ -224,10 +302,10 @@ export default function LogisticsPage() {
           <Field label="Adres">
             <TextInput value={dinner.address} onChange={(v) => setDinner({ address: v })} />
           </Field>
-          <Field label="Tijd (HH:MM)">
+          <Field label="Tijd (UU:MM)">
             <TextInput value={dinner.time} onChange={(v) => setDinner({ time: v })} placeholder="20:15" />
           </Field>
-          <Field label="Keuken sluit (HH:MM)">
+          <Field label="Keuken sluit (UU:MM)">
             <TextInput value={dinner.kitchenClosesAt} onChange={(v) => setDinner({ kitchenClosesAt: v })} placeholder="21:30" />
           </Field>
           <Field label="Gereserveerd voor (pers.)">
@@ -239,7 +317,7 @@ export default function LogisticsPage() {
           <Field label="Duur (min)">
             <NumberInput value={dinner.durationMin} onChange={(v) => setDinner({ durationMin: v })} />
           </Field>
-          <Field label="Fallback">
+          <Field label="Terugvaloptie">
             <TextInput value={dinner.fallback} onChange={(v) => setDinner({ fallback: v })} placeholder="Alternatief bij vol/gesloten" />
           </Field>
         </div>
@@ -249,11 +327,11 @@ export default function LogisticsPage() {
             checked={dinner.reserved}
             onChange={(v) => {
               setDinner({ reserved: v });
-              if (!v) logDecision("dinner", `Reservering bij ${dinner.location || "dinerlocatie"} ingetrokken.`);
+              if (!v) logDecision("dinner", `Reservering bij ${dinner.location || "eetlocatie"} ingetrokken.`);
             }}
             label="Gereserveerd"
           />
-          <Checkbox checked={dinner.onCriticalPath} onChange={(v) => setDinner({ onCriticalPath: v })} label="Op critical path" />
+          <Checkbox checked={dinner.onCriticalPath} onChange={(v) => setDinner({ onCriticalPath: v })} label="Op kritiek pad" />
           <Checkbox checked={dinner.beerCanStartHere} onChange={(v) => setDinner({ beerCanStartHere: v })} label="BZT kan hier starten" />
           <button className="btn btn-sm btn-primary" onClick={confirmDinnerReservation}>
             Bevestig reservering ({hc.dinner.going} pers.)
@@ -262,13 +340,7 @@ export default function LogisticsPage() {
 
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <div className="rounded-[6px] border border-line bg-sunken px-3 py-2">
-            <div className="erp-label">Keukenbuffer</div>
-            <div className="erp-mono text-[12px]">
-              {food.kitchenBufferMin === null
-                ? "—"
-                : `${food.kitchenBufferMin} min (${formatDuration(food.kitchenBufferMin)}) tussen ${dinner.time || "?"} en keukensluiting ${dinner.kitchenClosesAt || "?"}`}
-            </div>
-            <div className="erp-label mt-2">Issues</div>
+            <div className="erp-label">Aandachtspunten</div>
             {food.issues.length ? (
               <ul className="list-disc pl-5 text-[11.5px] leading-snug text-muted">
                 {food.issues.map((i) => (
@@ -276,7 +348,7 @@ export default function LogisticsPage() {
                 ))}
               </ul>
             ) : (
-              <div className="erp-mono text-[11.5px] text-go">Geen issues.</div>
+              <div className="erp-mono text-[11.5px] text-go">Geen aandachtspunten.</div>
             )}
           </div>
 
@@ -288,22 +360,32 @@ export default function LogisticsPage() {
                 </span>
                 <StatusBadge status={dinnerMismatch.status} />
               </div>
-              <div className="erp-mono mt-1 text-[11.5px] leading-relaxed text-muted">
-                <div>Reserved: {dinnerMismatch.reserved}</div>
-                <div>Confirmed dinner participants: {dinnerMismatch.confirmed}</div>
-                <div className="text-fg">STATUS: {dinnerMismatch.status}</div>
+              <div className="mt-2">
+                <StackedBar
+                  segments={[
+                    { label: "Gereserveerd", value: dinnerMismatch.reserved, tone: "navy" },
+                    {
+                      label: "Bevestigde eters",
+                      value: dinnerMismatch.confirmed,
+                      tone: dinnerMismatch.status === "OK" ? "go" : dinnerMismatch.status === "UNKNOWN" ? "unknown" : "nogo",
+                    },
+                  ]}
+                  height={12}
+                  formatValue={(v) => `${v} pers.`}
+                />
               </div>
-              <div className="mt-1 text-[11.5px] leading-snug text-muted">{dinnerMismatch.detail}</div>
+              <div className="mt-1.5 text-[11.5px] leading-snug text-muted">{dinnerMismatch.detail}</div>
             </div>
           )}
         </div>
       </Card>
 
-      {/* ---------------- Sunday ---------------- */}
+      {/* ---------------- Zondag ---------------- */}
       <Card
-        title="SUNDAY ACTIVITY"
-        eyebrow="Zondagprogramma"
+        title="ZONDAGPROGRAMMA"
+        eyebrow="Activiteit"
         actions={<StatusBadge status={sundayCheck?.status ?? "UNKNOWN"} />}
+        className="rise rise-4"
       >
         <Checkbox
           checked={sunday.relevant}
@@ -314,7 +396,7 @@ export default function LogisticsPage() {
           <>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Naam">
-                <TextInput value={sunday.name} onChange={(v) => setSunday({ name: v })} placeholder="Escape room, bowlen…" />
+                <TextInput value={sunday.name} onChange={(v) => setSunday({ name: v })} placeholder="Escaperoom, bowlen…" />
               </Field>
               <Field label="Locatie">
                 <TextInput value={sunday.location} onChange={(v) => setSunday({ location: v })} />
@@ -325,7 +407,7 @@ export default function LogisticsPage() {
                   onChange={(v) => setSunday({ travelFromAccommodationMin: v })}
                 />
               </Field>
-              <Field label="Starttijd (HH:MM)">
+              <Field label="Starttijd (UU:MM)">
                 <TextInput value={sunday.startTime} onChange={(v) => setSunday({ startTime: v })} placeholder="11:30" />
               </Field>
             </div>
@@ -348,7 +430,7 @@ export default function LogisticsPage() {
           </>
         ) : (
           <div className="erp-mono mt-2 text-[11.5px] text-muted">
-            Geen zondagprogramma. De readiness check &ldquo;Sunday programme&rdquo; wordt niet geëvalueerd.
+            Geen zondagprogramma. De check &ldquo;Zondagprogramma&rdquo; wordt niet meegewogen.
           </div>
         )}
       </Card>

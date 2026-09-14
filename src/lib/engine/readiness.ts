@@ -265,12 +265,12 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   if (w.phase === "COMPLETED") riskNarrative = "Weekend afgerond. Zie de terugblik.";
   else if (canLock) riskNarrative = "Alle blokkerende checks in orde. Het weekend mag VERGRENDELD worden.";
   else if (hoursToDeparture < 24)
-    riskNarrative = `Minder dan 24 uur tot vertrek met ${lockBlockers.length} open gating item(s). Elke beslissing die nu valt is per definitie last-minute; verwacht BZT-verlies en groepssplitsing.`;
+    riskNarrative = `Minder dan 24 uur tot vertrek met ${lockBlockers.length} open blokkerend(e) punt(en). Elke beslissing die nu valt is per definitie last-minute; verwacht BZT-verlies en groepssplitsing.`;
   else if (hoursToDeparture < 72)
-    riskNarrative = `Binnen 72 uur van vertrek met ${lockBlockers.length} open gating item(s). Reserveringen worden nu al riskant (restaurants vol, taxi's niet beschikbaar).`;
+    riskNarrative = `Binnen 72 uur van vertrek met ${lockBlockers.length} open blokkerend(e) punt(en). Reserveringen worden nu al riskant (restaurants vol, taxi's niet beschikbaar).`;
   else if (hoursToDeparture < 168)
-    riskNarrative = `${Math.round(hoursToDeparture / 24)} dagen tot vertrek. ${lockBlockers.length} gating item(s) open; nog te repareren zonder BZT-schade als er deze week besloten wordt.`;
-  else riskNarrative = `${Math.round(hoursToDeparture / 24)} dagen tot vertrek. Geen acute druk, maar ${lockBlockers.length} gating item(s) open.`;
+    riskNarrative = `${Math.round(hoursToDeparture / 24)} dagen tot vertrek. ${lockBlockers.length} blokkerend(e) punt(en) open; nog te repareren zonder BZT-schade als er deze week besloten wordt.`;
+  else riskNarrative = `${Math.round(hoursToDeparture / 24)} dagen tot vertrek. Geen acute druk, maar ${lockBlockers.length} blokkerend(e) punt(en) open.`;
 
   const gate: ReadinessReport["gate"] =
     w.phase === "COMPLETED"

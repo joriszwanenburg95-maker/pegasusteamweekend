@@ -3,28 +3,25 @@
 import { useState } from "react";
 import { assessTransport, formatDateTime } from "@/lib/engine";
 import type { ChecklistItem, ChecklistSection, ChecklistStatus, DecisionTopic } from "@/lib/types";
+import { nl } from "@/lib/labels";
 import { newId } from "@/store/store";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
 import { Badge, Card, DateTimeInput, Progress, Select, StatusBadge, TextInput, toneForPercent } from "@/components/ui";
+import { Gauge, StackedBar } from "@/components/viz";
 
-const SECTIONS: { key: ChecklistSection; title: string; note?: string }[] = [
-  { key: "beforeDeparture", title: "BEFORE DEPARTURE" },
-  { key: "access", title: "ACCESS" },
-  { key: "teamEquipment", title: "TEAM EQUIPMENT" },
+const SECTIONS: { key: ChecklistSection; note?: string }[] = [
+  { key: "beforeDeparture" },
+  { key: "access" },
+  { key: "teamEquipment" },
   {
     key: "personal",
-    title: "PERSONAL / LOCATION-SPECIFIC",
-    note: "Alleen items die door de situatie relevant zijn (bijv. tent wanneer de accommodatie geen bedden levert).",
+    note: "Alleen items die door de situatie relevant zijn (bijv. een tent wanneer de accommodatie geen bedden levert).",
   },
 ];
 
-const STATUS_OPTIONS: { value: ChecklistStatus; label: string }[] = [
-  { value: "open", label: "open" },
-  { value: "inProgress", label: "inProgress" },
-  { value: "done", label: "done" },
-  { value: "blocked", label: "blocked" },
-  { value: "na", label: "na" },
-];
+const CHECKLIST_STATUSES: ChecklistStatus[] = ["open", "inProgress", "done", "blocked", "na"];
+
+const STATUS_OPTIONS = CHECKLIST_STATUSES.map((s) => ({ value: s, label: nl(s) }));
 
 const STATUS_GLYPH: Record<ChecklistStatus, string> = {
   open: "[ ]",
@@ -92,7 +89,7 @@ export default function RunbookPage() {
   };
 
   const removeItem = (item: ChecklistItem) => {
-    if (!window.confirm(`Runbook-item "${item.label}" verwijderen?`)) return;
+    if (!window.confirm(`Draaiboekregel "${item.label}" verwijderen?`)) return;
     patch((w) => ({ ...w, checklist: w.checklist.filter((c) => c.id !== item.id) }));
   };
 
@@ -105,33 +102,45 @@ export default function RunbookPage() {
 
   const applicable = weekend.checklist.filter((c) => c.status !== "na");
   const doneAll = weekend.checklist.filter((c) => c.status === "done").length;
+  const blockedAll = weekend.checklist.filter((c) => c.status === "blocked").length;
+  const naAll = weekend.checklist.filter((c) => c.status === "na").length;
+  const inProgressAll = weekend.checklist.filter((c) => c.status === "inProgress").length;
+  const openAll = weekend.checklist.filter((c) => c.status === "open").length;
   const completion = applicable.length
     ? Math.round((applicable.filter((c) => c.status === "done").length / applicable.length) * 100)
     : 100;
 
+  const statusSegments = [
+    { label: nl("done"), value: doneAll, tone: "go" as const },
+    { label: nl("inProgress"), value: inProgressAll, tone: "warn" as const },
+    { label: nl("open"), value: openAll, tone: "unknown" as const },
+    { label: nl("blocked"), value: blockedAll, tone: "nogo" as const },
+    { label: nl("na"), value: naAll, tone: "neutral" as const },
+  ].filter((s) => s.value > 0);
+
   const autoChecks: { label: string; status: string; detail: string }[] = [
     {
-      label: "Attendance locked",
+      label: "Deelnemers vergrendeld",
       status: weekend.headcountLockedAt ? "PASS" : "FAIL",
-      detail: weekend.headcountLockedAt ? formatDateTime(weekend.headcountLockedAt) : "headcount niet gelocked",
+      detail: weekend.headcountLockedAt ? formatDateTime(weekend.headcountLockedAt) : "niet vergrendeld",
     },
     {
-      label: "Restaurant confirmed",
+      label: "Restaurant bevestigd",
       status: weekend.dinner.reserved ? "PASS" : "FAIL",
       detail: weekend.dinner.reserved ? `${weekend.dinner.reservedCount} pers.` : "geen reservering",
     },
     {
-      label: "Accommodation confirmed",
+      label: "Accommodatie bevestigd",
       status: acc.confirmed ? "PASS" : "FAIL",
       detail: acc.name || "geen accommodatie",
     },
     {
-      label: "Drivers confirmed",
+      label: "Chauffeurs bevestigd",
       status: transport.driversConfirmed ? "PASS" : "FAIL",
       detail: transport.driversConfirmed ? `${weekend.vehicles.length} auto(s)` : "chauffeur ontbreekt of gaat niet mee",
     },
     {
-      label: "Passengers assigned",
+      label: "Passagiers ingedeeld",
       status: transport.unassignedTravelerIds.length === 0 ? "PASS" : "FAIL",
       detail:
         transport.unassignedTravelerIds.length === 0
@@ -147,36 +156,51 @@ export default function RunbookPage() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="erp-label">Module O-01 · Uitvoering</div>
-          <h2 className="text-base font-bold tracking-tight text-navy">RUNBOOK</h2>
+          <h2 className="text-base font-bold tracking-tight text-navy">DRAAIBOEK</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="erp-mono text-[11.5px] text-faint">
-            RUNBOOK COMPLETION {completion}% · {doneAll}/{weekend.checklist.length} done
-          </span>
-          <button className="btn btn-sm no-print" onClick={() => window.print()}>
-            Print
-          </button>
-        </div>
+        <button className="btn btn-sm no-print" onClick={() => window.print()}>
+          Afdrukken
+        </button>
       </div>
 
-      <Progress value={completion} tone={toneForPercent(completion)} />
-
-      {/* ---------------- Auto-checks ---------------- */}
-      <Card title="AUTO-CHECKS" eyebrow="Live uit de engine — read-only">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {autoChecks.map((a) => (
-            <div key={a.label} className="rounded-[6px] border border-line bg-sunken px-2 py-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11.5px] font-semibold text-navy">{a.label}</span>
-                <StatusBadge status={a.status} />
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* ---------------- Voortgang ---------------- */}
+        <Card title="VOORTGANG" eyebrow="Alle secties" className="rise rise-1">
+          <div className="flex items-center gap-3">
+            <Gauge
+              value={completion}
+              size={84}
+              stroke={8}
+              tone={toneForPercent(completion)}
+              suffix="%"
+              label="afgerond"
+            />
+            <div className="min-w-0 flex-1">
+              <StackedBar segments={statusSegments} height={12} />
+              <div className="erp-mono mt-2 text-[11px] text-muted">
+                {doneAll}/{weekend.checklist.length} {nl("done").toLowerCase()}
               </div>
-              <div className="erp-mono text-[10.5px] leading-snug text-muted">{a.detail}</div>
             </div>
-          ))}
-        </div>
-      </Card>
+          </div>
+        </Card>
 
-      {SECTIONS.map((section) => {
+        {/* ---------------- Automatische checks ---------------- */}
+        <Card title="AUTOMATISCHE CHECKS" eyebrow="Live uit de engine — alleen-lezen" className="lg:col-span-2 rise rise-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {autoChecks.map((a) => (
+              <div key={a.label} className="rounded-[6px] border border-line bg-sunken px-2 py-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11.5px] font-semibold text-navy">{a.label}</span>
+                  <StatusBadge status={a.status} />
+                </div>
+                <div className="erp-mono text-[10.5px] leading-snug text-muted">{a.detail}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {SECTIONS.map((section, si) => {
         const items = weekend.checklist.filter((c) => c.section === section.key);
         if (section.key === "personal" && items.length === 0) return null;
         const sectionApplicable = items.filter((c) => c.status !== "na");
@@ -188,14 +212,15 @@ export default function RunbookPage() {
         return (
           <Card
             key={section.key}
-            title={section.title}
+            title={nl(section.key)}
             eyebrow={section.key === "access" ? "Toegang + checklist" : "Checklist"}
             actions={
               <span className="erp-mono text-[11px] text-muted">
-                {sectionDone}/{items.length} done
+                {sectionDone}/{items.length} {nl("done").toLowerCase()}
               </span>
             }
             padded={false}
+            className={`rise rise-${Math.min(6, si + 3)}`}
           >
             <div className="px-4 pt-2">
               <Progress value={sectionPct} tone={toneForPercent(sectionPct)} />
@@ -204,8 +229,8 @@ export default function RunbookPage() {
 
             {section.key === "access" && (
               <div className="px-4 pt-3">
-                <AccessLine label="Accommodation" value={acc.name ? `${acc.name}${acc.address ? `, ${acc.address}` : ""}` : ""} />
-                <AccessLine label="Gate/access code" value={acc.accessCode} />
+                <AccessLine label="Accommodatie" value={acc.name ? `${acc.name}${acc.address ? `, ${acc.address}` : ""}` : ""} />
+                <AccessLine label="Toegangscode" value={acc.accessCode} />
                 <AccessLine label="Contact" value={acc.contact} />
                 <AccessLine
                   label="Check-in"
@@ -220,8 +245,8 @@ export default function RunbookPage() {
                   <tr>
                     <th className="w-[54px]">St.</th>
                     <th className="w-[120px]">Status</th>
-                    <th className="min-w-[200px]">Item</th>
-                    <th className="w-[150px]">Owner</th>
+                    <th className="min-w-[200px]">Regel</th>
+                    <th className="w-[150px]">Eigenaar</th>
                     <th className="min-w-[190px]">Deadline</th>
                     <th className="w-[90px] no-print" />
                   </tr>
@@ -238,8 +263,8 @@ export default function RunbookPage() {
                         <td>
                           <button
                             className={`erp-mono text-[14px] font-bold ${STATUS_COLOR[item.status]}`}
-                            title="Klik: open → inProgress → done"
-                            aria-label={`Status ${item.label}: ${item.status}`}
+                            title={`Klik: ${nl("open")} → ${nl("inProgress")} → ${nl("done")}`}
+                            aria-label={`Status ${item.label}: ${nl(item.status)}`}
                             onClick={() => updateItem(item.id, { status: nextStatus(item.status) })}
                           >
                             {STATUS_GLYPH[item.status]}
@@ -257,7 +282,7 @@ export default function RunbookPage() {
                         <td className="min-w-[200px]">
                           <TextInput value={item.label} onChange={(v) => updateItem(item.id, { label: v })} />
                           {item.conditional && (
-                            <span className="erp-label mt-0.5 block">conditional · alleen tonen indien relevant</span>
+                            <span className="erp-label mt-0.5 block">voorwaardelijk · alleen tonen indien relevant</span>
                           )}
                         </td>
                         <td>
@@ -277,7 +302,7 @@ export default function RunbookPage() {
                                 className="btn btn-sm no-print"
                                 onClick={() => updateItem(item.id, { deadline: departureMinus24 })}
                               >
-                                Zet op T-24h
+                                Zet op {nl("T-24H")}
                               </button>
                             </div>
                           ) : (
@@ -294,7 +319,7 @@ export default function RunbookPage() {
                           )}
                           {overdue && (
                             <span className="erp-mono mt-0.5 block text-[10.5px] font-bold text-nogo">
-                              OVERDUE · {formatDateTime(item.deadline ?? now)}
+                              TE LAAT · {formatDateTime(item.deadline ?? now)}
                             </span>
                           )}
                         </td>
@@ -309,7 +334,7 @@ export default function RunbookPage() {
                   {items.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center text-muted">
-                        Geen items in deze sectie.
+                        Geen regels in deze sectie.
                       </td>
                     </tr>
                   )}
@@ -319,7 +344,7 @@ export default function RunbookPage() {
 
             <div className="no-print flex flex-wrap items-end gap-2 border-t border-line px-4 py-3">
               <div className="w-[240px]">
-                <span className="erp-label mb-1 block">Nieuw item</span>
+                <span className="erp-label mb-1 block">Nieuwe regel</span>
                 <TextInput
                   value={drafts[section.key] ?? ""}
                   onChange={(v) => setDrafts((d) => ({ ...d, [section.key]: v }))}
@@ -338,20 +363,19 @@ export default function RunbookPage() {
         );
       })}
 
-      <Card title="RUNBOOK SIGN-OFF" eyebrow="Operational readiness">
+      <Card title="DRAAIBOEK AFTEKENEN" eyebrow="Operationele gereedheid" className="rise rise-6">
         <div className="flex flex-wrap items-center gap-3">
-          <Badge tone={toneForPercent(completion)}>COMPLETION {completion}%</Badge>
+          <Badge tone={toneForPercent(completion)}>{completion}% afgerond</Badge>
           <span className="erp-mono text-[11.5px] text-muted">
-            {doneAll} done · {weekend.checklist.filter((c) => c.status === "blocked").length} blocked ·{" "}
-            {weekend.checklist.filter((c) => c.status === "na").length} n.v.t.
+            {doneAll} {nl("done").toLowerCase()} · {blockedAll} {nl("blocked").toLowerCase()} · {naAll} {nl("na").toLowerCase()}
           </span>
           <button
             className="btn btn-sm no-print"
             disabled={completion < 100}
-            title={completion < 100 ? "Alle toepasselijke items moeten done zijn." : undefined}
-            onClick={() => logDecision("other", `Runbook afgetekend op ${formatDateTime(now)} (100% completion).`)}
+            title={completion < 100 ? `Alle toepasselijke regels moeten op ${nl("done")} staan.` : undefined}
+            onClick={() => logDecision("other", `Draaiboek afgetekend op ${formatDateTime(now)} (100% afgerond).`)}
           >
-            Teken runbook af
+            Teken draaiboek af
           </button>
         </div>
       </Card>

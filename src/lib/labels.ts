@@ -94,6 +94,7 @@ const LABELS: Record<string, string> = {
   access: "TOEGANG",
   teamEquipment: "TEAMMATERIAAL",
   personal: "PERSOONLIJK / LOCATIESPECIFIEK",
+  both: "Avond + eten",
   // Return transport
   walk: "Lopen",
   car: "Auto",

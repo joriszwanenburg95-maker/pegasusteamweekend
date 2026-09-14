@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { newId } from "@/store/store";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
 import type { PathCategory, PathStep } from "@/lib/types";
@@ -24,10 +24,14 @@ import {
   TextInput,
   type Tone,
 } from "@/components/ui";
+import { CountUp, Gauge, StackedBar, toneColor } from "@/components/viz";
 
-const CATEGORY_OPTIONS: { value: PathCategory; label: string }[] = (
-  Object.keys(CATEGORY_LABEL) as PathCategory[]
-).map((c) => ({ value: c, label: CATEGORY_LABEL[c] }));
+const CATEGORIES = Object.keys(CATEGORY_LABEL) as PathCategory[];
+
+const CATEGORY_OPTIONS: { value: PathCategory; label: string }[] = CATEGORIES.map((c) => ({
+  value: c,
+  label: CATEGORY_LABEL[c],
+}));
 
 function toneForCategory(c: PathCategory): Tone {
   switch (c) {
@@ -42,14 +46,6 @@ function toneForCategory(c: PathCategory): Tone {
   }
 }
 
-/** Randkleur van een node, per categorie. */
-const NODE_BORDER: Record<PathCategory, string> = {
-  valueAdding: "border-cobalt",
-  bzt: "border-go",
-  logistics: "border-line-strong",
-  waste: "border-nogo",
-};
-
 export default function CriticalPathPage() {
   const { weekend, patch } = useCurrentWeekend();
   const [skipped, setSkipped] = useState<Record<string, boolean>>({});
@@ -60,6 +56,9 @@ export default function CriticalPathPage() {
   const bzt = estimateBzt(weekend);
   const primary = primaryNightlife(weekend);
   const firstBeerId = analysis.steps.find((s) => s.category === "bzt")?.id ?? null;
+  const longest = Math.max(1, ...analysis.steps.map((s) => s.durationMin));
+  const bztShare =
+    analysis.totalMin > 0 ? Math.round((analysis.byCategory.bzt / analysis.totalMin) * 100) : 0;
 
   const skippedIds = Object.entries(skipped)
     .filter(([, on]) => on)
@@ -117,19 +116,19 @@ export default function CriticalPathPage() {
   const derivedHints: string[] = [];
   if (weekend.dinner.known && !weekend.dinner.beerCanStartHere)
     derivedHints.push(
-      "Moving dinner to a venue where the beer moment can start saves one transfer.",
+      "Eten op een locatie waar het biermoment kan starten schrapt één verplaatsing.",
     );
   if (primary?.taxiRequired)
-    derivedHints.push("Taxi to another city costs an estimated 90 minutes of team BZT.");
+    derivedHints.push("Een taxi naar een andere stad kost naar schatting 90 minuten team-BZT.");
 
-  const firstStepLabel = weekend.match.hasMatch ? "MATCH END" : "ARRIVAL";
+  const firstStepLabel = weekend.match.hasMatch ? "EINDE WEDSTRIJD" : "AANKOMST";
 
   return (
     <div className="space-y-5">
-      {/* KPIs ------------------------------------------------------------ */}
+      {/* KPI’S ------------------------------------------------------------ */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <Kpi
-          label="Minutes to first beer"
+          label="Tijd tot eerste bier"
           value={
             analysis.minutesToFirstBeer === null
               ? "—"
@@ -146,14 +145,16 @@ export default function CriticalPathPage() {
           }
           sub={
             analysis.firstBeerAt
-              ? `FIRST BEER om ${isoToClock(analysis.firstBeerAt)} · pad start bij ${firstStepLabel}`
-              : "Geen BZT-stap op het critical path"
+              ? `EERSTE BIER om ${isoToClock(analysis.firstBeerAt)} · pad start bij ${firstStepLabel}`
+              : "Geen BZT-stap op het kritieke pad"
           }
+          className="rise rise-1"
         />
         <Kpi
-          label="Total path"
+          label="Totale doorlooptijd"
           value={formatDuration(analysis.totalMin)}
           sub={`${analysis.steps.length} stappen vanaf ${firstStepLabel}`}
+          className="rise rise-1"
         />
         <Kpi
           label="BZT netto"
@@ -161,86 +162,135 @@ export default function CriticalPathPage() {
           tone={bzt.netMin > 0 ? "go" : "nogo"}
           sub={
             bzt.splitPenaltyMin > 0
-              ? `−${formatDuration(bzt.splitPenaltyMin)} door Group Split Risk`
+              ? `−${formatDuration(bzt.splitPenaltyMin)} door groepssplitsingsrisico`
               : "Geen splitsingsaftrek"
           }
+          className="rise rise-2"
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {(Object.keys(CATEGORY_LABEL) as PathCategory[]).map((c) => (
-          <Kpi
-            key={c}
-            label={CATEGORY_LABEL[c]}
-            value={formatDuration(analysis.byCategory[c])}
-            tone={c === "bzt" ? "go" : c === "waste" ? "nogo" : undefined}
-            sub={`${Math.round(
-              analysis.totalMin > 0 ? (analysis.byCategory[c] / analysis.totalMin) * 100 : 0,
-            )}% van het pad`}
+      {/* VERDELING -------------------------------------------------------- */}
+      <Card eyebrow="Verdeling" title="Waar gaat de tijd heen?" className="rise rise-2">
+        <div className="flex flex-wrap items-center gap-4">
+          <Gauge
+            value={bztShare}
+            size={104}
+            stroke={10}
+            suffix="%"
+            tone={bztShare >= 40 ? "go" : bztShare >= 20 ? "warn" : "nogo"}
+            label="BZT-aandeel"
           />
-        ))}
-        <Kpi
-          label="Transfers"
-          value={analysis.transfers}
-          tone={analysis.transfers >= 3 ? "nogo" : analysis.transfers >= 2 ? "warn" : "go"}
-          sub="Verplaatsingen op het pad"
-        />
-      </div>
+          <div className="min-w-[220px] flex-1">
+            <StackedBar
+              height={18}
+              segments={CATEGORIES.map((c) => ({
+                label: CATEGORY_LABEL[c],
+                value: analysis.byCategory[c],
+                tone: toneForCategory(c),
+              }))}
+              formatValue={(v) => formatDuration(v)}
+            />
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {CATEGORIES.map((c) => (
+                <div key={c} className="rounded-[4px] border border-line px-2 py-1.5">
+                  <div className="erp-label truncate" title={CATEGORY_LABEL[c]}>
+                    {CATEGORY_LABEL[c]}
+                  </div>
+                  <div className="erp-mono text-[13px] font-semibold text-navy">
+                    {formatDuration(analysis.byCategory[c])}
+                    <span className="text-faint text-[11px] ml-1">
+                      {Math.round(
+                        analysis.totalMin > 0
+                          ? (analysis.byCategory[c] / analysis.totalMin) * 100
+                          : 0,
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-[4px] border border-line px-2 py-1.5">
+                <div className="erp-label">Verplaatsingen</div>
+                <div
+                  className={`erp-mono text-[13px] font-semibold ${
+                    analysis.transfers >= 3
+                      ? "text-nogo"
+                      : analysis.transfers >= 2
+                        ? "text-warn"
+                        : "text-go"
+                  }`}
+                >
+                  <CountUp value={analysis.transfers} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
-      {/* FLOW ------------------------------------------------------------ */}
-      <Card eyebrow="Critical drinking path" title="Van wedstrijdeinde tot eerste bier">
+      {/* TIJDLIJN --------------------------------------------------------- */}
+      <Card eyebrow="Kritiek Bierpad" title={`Van ${firstStepLabel.toLowerCase()} tot eerste bier`} className="rise rise-3">
         {analysis.steps.length === 0 ? (
-          <EmptyState title="Geen stappen op het critical path">
-            Voeg stappen toe in de editor hieronder om het pad door te rekenen.
+          <EmptyState title="Geen stappen op het kritieke pad">
+            Voeg stappen toe in de tabel hieronder om het pad door te rekenen.
           </EmptyState>
         ) : (
-          <ol className="space-y-0">
-            {analysis.steps.map((s, i) => {
+          <ol className="relative pl-7">
+            <span className="absolute left-[10px] top-2 bottom-2 w-[2px] bg-line" aria-hidden />
+            {analysis.steps.map((s) => {
               const isFirstBeer = s.id === firstBeerId;
               const isSkipped = !!skipped[s.id];
+              const color = toneColor(toneForCategory(s.category));
+              const width = `${Math.max(8, (s.durationMin / longest) * 100)}%`;
               return (
-                <li key={s.id}>
+                <li key={s.id} className="relative pb-2.5">
+                  <span
+                    className={`absolute -left-6 top-[9px] w-3.5 h-3.5 rounded-full border-[3px] bg-elev ${
+                      isFirstBeer ? "viz-pulse" : ""
+                    }`}
+                    style={{ borderColor: color }}
+                    aria-hidden
+                  />
                   <div
-                    className={`rounded-[6px] border-l-4 border border-line ${NODE_BORDER[s.category]} bg-elev px-3 py-2.5 ${
-                      isFirstBeer ? "bg-go-bg" : ""
+                    className={`rounded-[6px] border border-line bg-elev px-3 py-2 ${
+                      isFirstBeer ? "bg-go-bg border-go/40" : ""
                     } ${isSkipped ? "opacity-45" : ""}`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <span className="erp-mono text-sm font-semibold text-navy uppercase">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <span className="erp-mono text-[13px] font-semibold text-navy uppercase">
                           {s.label}
                         </span>
-                        <Badge tone={toneForCategory(s.category)}>
-                          {CATEGORY_LABEL[s.category]}
-                        </Badge>
-                        {isFirstBeer && <Badge tone="go">First beer {isoToClock(s.startAt)}</Badge>}
-                        {s.isTransfer && <Badge tone="neutral">Transfer</Badge>}
+                        {isFirstBeer && <Badge tone="go">EERSTE BIER {isoToClock(s.startAt)}</Badge>}
+                        {s.isTransfer && <Badge tone="neutral">Verplaatsing</Badge>}
                         {s.optional && <Badge tone="warn">Optioneel</Badge>}
                       </div>
-                      <div className="erp-mono text-[12px] text-muted whitespace-nowrap">
-                        {isoToClock(s.startAt)} → {isoToClock(s.endAt)} ·{" "}
-                        {formatDuration(s.durationMin)}
+                      <div className="erp-mono text-[11.5px] text-muted whitespace-nowrap">
+                        {isoToClock(s.startAt)} → {isoToClock(s.endAt)}
                       </div>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="h-2.5 rounded-sm bg-sunken flex-1 overflow-hidden">
+                        <div
+                          className="h-full rounded-sm viz-grow-x"
+                          style={{ width, background: color }}
+                          title={`${CATEGORY_LABEL[s.category]} · ${formatDuration(s.durationMin)}`}
+                        />
+                      </div>
+                      <span className="erp-mono text-[11.5px] font-semibold text-navy w-[54px] text-right shrink-0">
+                        {formatDuration(s.durationMin)}
+                      </span>
                     </div>
                     {s.optional && (
                       <div className="mt-1.5 pt-1.5 border-t border-line">
                         <Checkbox
                           checked={isSkipped}
                           onChange={(v) => setSkipped((prev) => ({ ...prev, [s.id]: v }))}
-                          label="What if: deze stap overslaan (simulatie, niet opgeslagen)"
+                          label="Wat als: deze stap overslaan (simulatie, niet opgeslagen)"
                         />
                       </div>
                     )}
                   </div>
-                  {i < analysis.steps.length - 1 && (
-                    <div className="flex items-center gap-1.5 pl-4 py-1 text-faint">
-                      <span className="block w-px h-4 bg-line-strong" />
-                      <ArrowDown size={13} />
-                      <span className="erp-mono text-[11px]">
-                        {analysis.steps[i + 1].durationMin}m
-                      </span>
-                    </div>
-                  )}
                 </li>
               );
             })}
@@ -252,8 +302,7 @@ export default function CriticalPathPage() {
             <div className="erp-label">Simulatie · {skippedIds.length} stap(pen) overgeslagen</div>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mt-1">
               <span className="erp-mono text-lg font-semibold text-navy">
-                First beer{" "}
-                {simulated.firstBeerAt ? isoToClock(simulated.firstBeerAt) : "—"}
+                Eerste bier {simulated.firstBeerAt ? isoToClock(simulated.firstBeerAt) : "—"}
               </span>
               <span className="erp-mono text-[12.5px] text-muted">
                 was {analysis.firstBeerAt ? isoToClock(analysis.firstBeerAt) : "—"}
@@ -269,17 +318,22 @@ export default function CriticalPathPage() {
               </span>
             </div>
             <button className="btn btn-sm mt-2" onClick={() => setSkipped({})}>
-              Simulatie resetten
+              Simulatie herstellen
             </button>
           </div>
         )}
       </Card>
 
-      {/* OPTIMIZATIONS --------------------------------------------------- */}
-      <Card eyebrow="Optimizations" title="Waar zit de tijd die niemand wil" padded={false}>
+      {/* OPTIMALISATIES --------------------------------------------------- */}
+      <Card
+        eyebrow="Optimalisaties"
+        title="Waar zit de tijd die niemand wil"
+        padded={false}
+        className="rise rise-4"
+      >
         {analysis.optimizations.length === 0 && derivedHints.length === 0 ? (
           <div className="px-4 py-5 text-sm text-muted">
-            Geen optionele stappen of waste op het pad: er valt niets te schrappen.
+            Geen optionele stappen of verspilling op het pad: er valt niets te schrappen.
           </div>
         ) : (
           <div className="divide-y divide-line">
@@ -299,7 +353,7 @@ export default function CriticalPathPage() {
             {derivedHints.map((h) => (
               <div key={h} className="px-4 py-2.5 flex flex-wrap items-start gap-3">
                 <span className="erp-mono text-[11px] font-semibold text-faint whitespace-nowrap w-[72px] pt-0.5">
-                  DERIVED
+                  AFGELEID
                 </span>
                 <div className="text-[12.5px] text-muted leading-snug min-w-0 flex-1">{h}</div>
               </div>
@@ -308,11 +362,12 @@ export default function CriticalPathPage() {
         )}
       </Card>
 
-      {/* EDITOR ---------------------------------------------------------- */}
+      {/* BEWERKEN --------------------------------------------------------- */}
       <Card
-        eyebrow="Editor"
-        title="Stappen op het critical path"
+        eyebrow="Bewerken"
+        title="Stappen op het kritieke pad"
         padded={false}
+        className="rise rise-5"
         actions={
           <button className="btn btn-primary btn-sm" onClick={addStep}>
             <Plus size={13} /> Stap toevoegen
@@ -324,12 +379,12 @@ export default function CriticalPathPage() {
             <thead>
               <tr>
                 <th className="w-[36px]">#</th>
-                <th className="min-w-[180px]">Label</th>
+                <th className="min-w-[180px]">Stap</th>
                 <th className="w-[90px]">Duur</th>
                 <th className="min-w-[150px]">Categorie</th>
                 <th className="w-[80px]">Optioneel</th>
-                <th className="w-[80px]">Transfer</th>
-                <th className="min-w-[220px]">Optimization hint</th>
+                <th className="w-[90px]">Verplaatsing</th>
+                <th className="min-w-[220px]">Optimalisatiehint</th>
                 <th className="w-[110px]" />
               </tr>
             </thead>

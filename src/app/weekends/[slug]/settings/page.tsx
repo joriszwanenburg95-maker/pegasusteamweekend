@@ -7,6 +7,7 @@ import { newId, useStore } from "@/store/store";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
 import { WEEKEND_PHASES, type DecisionTopic, type WeekendPhase } from "@/lib/types";
 import { evaluateReadiness, formatDateTime, hoursBetween } from "@/lib/engine";
+import { nl } from "@/lib/labels";
 import {
   Badge,
   Callout,
@@ -16,22 +17,18 @@ import {
   Field,
   PhaseBadge,
   Select,
+  StatusBadge,
   TextInput,
 } from "@/components/ui";
+import { PhaseStepper } from "@/components/viz";
 
-const TOPIC_OPTIONS: { value: DecisionTopic; label: string }[] = [
-  { value: "attendance", label: "ATTENDANCE" },
-  { value: "accommodation", label: "ACCOMMODATION" },
-  { value: "dinner", label: "DINNER" },
-  { value: "nightlife", label: "NIGHTLIFE" },
-  { value: "transport", label: "TRANSPORT" },
-  { value: "activity", label: "ACTIVITY" },
-  { value: "other", label: "OTHER" },
-];
+const TOPIC_OPTIONS: { value: DecisionTopic; label: string }[] = (
+  ["attendance", "accommodation", "dinner", "nightlife", "transport", "activity", "other"] as DecisionTopic[]
+).map((v) => ({ value: v, label: v === "other" ? "Overig" : nl(v) }));
 
 const PHASE_OPTIONS: { value: WeekendPhase; label: string }[] = WEEKEND_PHASES.map((p) => ({
   value: p,
-  label: p,
+  label: nl(p),
 }));
 
 export default function SettingsPage() {
@@ -55,9 +52,12 @@ export default function SettingsPage() {
     if (phase === weekend.phase) return;
     set("phase", phase);
     if (phase === "LOCKED" && !readiness.canLock) {
-      logDecision("other", `OVERRIDE: phase set to ${phase} zonder groen licht van de readiness gate.`);
+      logDecision(
+        "other",
+        `OVERRIDE: fase op ${nl(phase)} gezet zonder groen licht van de gereedheidspoort.`,
+      );
     } else {
-      logDecision("other", `Fase gewijzigd van ${weekend.phase} naar ${phase}.`);
+      logDecision("other", `Fase gewijzigd van ${nl(weekend.phase)} naar ${nl(phase)}.`);
     }
   };
 
@@ -69,14 +69,14 @@ export default function SettingsPage() {
   };
 
   const removeDecision = (id: string) => {
-    if (!window.confirm("Deze regel uit het decision log verwijderen?")) return;
+    if (!window.confirm("Deze regel uit het besluitenlog verwijderen?")) return;
     patch((w) => ({ ...w, decisions: w.decisions.filter((d) => d.id !== id) }));
   };
 
   const deleteWeekend = () => {
     if (
       !window.confirm(
-        `Weekend “${weekend.name}” definitief verwijderen? Alle deelnemers, reserveringen en het decision log gaan verloren.`,
+        `Weekend “${weekend.name}” definitief verwijderen? Alle deelnemers, reserveringen en het besluitenlog gaan verloren.`,
       )
     )
       return;
@@ -90,14 +90,13 @@ export default function SettingsPage() {
     <div className="space-y-5">
       {weekend.historical && (
         <Callout tone="neutral" title="Historische case">
-          Dit weekend is opgenomen als historische case. Wijzigen mag, maar de waarde zit in de
-          vastgelegde feiten en de lessons learned: pas het alleen aan als de registratie feitelijk
-          onjuist is.
+          Dit weekend is vastgelegd als historische case: pas het alleen aan als de registratie
+          feitelijk onjuist is.
         </Callout>
       )}
 
-      {/* MASTER DATA ----------------------------------------------------- */}
-      <Card eyebrow="Master data" title="Weekend">
+      {/* BASISGEGEVENS ---------------------------------------------------- */}
+      <Card eyebrow="Basisgegevens" title="Weekend" className="rise rise-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Field label="Naam" className="sm:col-span-2">
             <TextInput value={weekend.name} onChange={(v) => set("name", v)} />
@@ -108,10 +107,10 @@ export default function SettingsPage() {
           <Field label="Stad">
             <TextInput value={weekend.city} onChange={(v) => set("city", v)} />
           </Field>
-          <Field label="Departure" hint="Vertrek uit Nijmegen" className="sm:col-span-2">
+          <Field label="Vertrek" hint="Vertrek uit Nijmegen" className="sm:col-span-2">
             <DateTimeInput value={weekend.departureAt} onChange={(iso) => set("departureAt", iso)} />
           </Field>
-          <Field label="Return" className="sm:col-span-2">
+          <Field label="Terugkomst" className="sm:col-span-2">
             <DateTimeInput value={weekend.returnAt} onChange={(iso) => set("returnAt", iso)} />
           </Field>
         </div>
@@ -126,12 +125,12 @@ export default function SettingsPage() {
         </Field>
       </Card>
 
-      {/* MATCH CONTEXT --------------------------------------------------- */}
-      <Card eyebrow="Match context" title="Wedstrijd">
+      {/* WEDSTRIJD -------------------------------------------------------- */}
+      <Card eyebrow="Wedstrijdcontext" title="Wedstrijd" className="rise rise-2">
         <Checkbox
           checked={weekend.match.hasMatch}
           onChange={(v) => patch((w) => ({ ...w, match: { ...w.match, hasMatch: v } }))}
-          label="Er wordt een wedstrijd gespeeld (critical path start bij MATCH END)"
+          label="Er wordt een wedstrijd gespeeld (kritiek pad start bij EINDE WEDSTRIJD)"
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
           <Field label="Tegenstander">
@@ -140,7 +139,7 @@ export default function SettingsPage() {
               onChange={(v) => patch((w) => ({ ...w, match: { ...w.match, opponent: v } }))}
             />
           </Field>
-          <Field label="Sporthal / venue">
+          <Field label="Sporthal">
             <TextInput
               value={weekend.match.venue}
               onChange={(v) => patch((w) => ({ ...w, match: { ...w.match, venue: v } }))}
@@ -159,13 +158,17 @@ export default function SettingsPage() {
               label="Uitwedstrijd"
             />
           </div>
-          <Field label="Match start" className="sm:col-span-2">
+          <Field label="Aanvang wedstrijd" className="sm:col-span-2">
             <DateTimeInput
               value={weekend.match.matchStart}
               onChange={(iso) => patch((w) => ({ ...w, match: { ...w.match, matchStart: iso } }))}
             />
           </Field>
-          <Field label="Match end" hint="Incl. netjes uitspelen; startpunt critical path" className="sm:col-span-2">
+          <Field
+            label="Einde wedstrijd"
+            hint="Incl. netjes uitspelen; startpunt kritiek pad"
+            className="sm:col-span-2"
+          >
             <DateTimeInput
               value={weekend.match.matchEnd}
               onChange={(iso) => patch((w) => ({ ...w, match: { ...w.match, matchEnd: iso } }))}
@@ -174,15 +177,16 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* PHASE ----------------------------------------------------------- */}
-      <Card eyebrow="Phase control" title="Fase en vastlegging">
-        <Callout tone="warn" title="Raw override">
-          De readiness-pagina bewaakt de gate: LOCKED hoort alleen te kunnen als alle gating checks
-          PASS zijn. Deze select is een rauwe override en wordt als
-          {" "}<span className="erp-mono">OVERRIDE: phase set to X</span> in het decision log
-          gezet zodra je naar LOCKED gaat zonder groen licht. Gate staat nu op{" "}
-          <span className="erp-mono font-semibold">{readiness.gate}</span> ({readiness.percent}%,{" "}
-          {readiness.lockBlockers.length} blocker(s)).
+      {/* FASE ------------------------------------------------------------- */}
+      <Card eyebrow="Fasebeheer" title="Fase en vastlegging" className="rise rise-3">
+        <div className="pt-1 pb-3">
+          <PhaseStepper phases={WEEKEND_PHASES} current={weekend.phase} labels={nl} />
+        </div>
+
+        <Callout tone="warn" title="Directe override">
+          De gereedheidspagina bewaakt de poort: {nl("LOCKED")} hoort alleen te kunnen als alle
+          blokkerende checks {nl("PASS")} zijn. Deze keuzelijst omzeilt dat en legt het vast als{" "}
+          <span className="erp-mono">OVERRIDE: fase op … gezet</span> in het besluitenlog.
         </Callout>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
@@ -190,19 +194,21 @@ export default function SettingsPage() {
             <Select value={weekend.phase} onChange={changePhase} options={PHASE_OPTIONS} />
           </Field>
           <div>
-            <div className="erp-label mb-1">Huidige fase</div>
+            <div className="erp-label mb-1">Huidige stand</div>
             <div className="flex flex-wrap items-center gap-2">
               <PhaseBadge phase={weekend.phase} />
+              <StatusBadge status={readiness.gate} />
               <Badge tone={readiness.canLock ? "go" : "nogo"}>
-                {readiness.canLock ? "Lock toegestaan" : "Lock geblokkeerd"}
+                {readiness.canLock ? "Vergrendelen mag" : "Vergrendelen geblokkeerd"}
               </Badge>
+              <span className="erp-mono text-[12px] text-muted">{readiness.percent}%</span>
             </div>
           </div>
           <div>
-            <div className="erp-label mb-1">Lock blockers</div>
+            <div className="erp-label mb-1">Blokkerende punten</div>
             <div className="text-[12px] text-muted leading-snug">
               {readiness.lockBlockers.length === 0
-                ? "Geen open gating items."
+                ? "Geen open blokkerende punten."
                 : readiness.lockBlockers.join(" · ")}
             </div>
           </div>
@@ -210,7 +216,7 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-line">
           <div className="rounded-[6px] border border-line px-3 py-2">
-            <div className="erp-label">Headcount locked at</div>
+            <div className="erp-label">Deelnemersaantal vastgezet op</div>
             <div className="erp-mono text-[13px] mt-0.5">
               {weekend.headcountLockedAt ? formatDateTime(weekend.headcountLockedAt) : "—"}
             </div>
@@ -219,26 +225,26 @@ export default function SettingsPage() {
               disabled={!weekend.headcountLockedAt}
               onClick={() => {
                 set("headcountLockedAt", null);
-                logDecision("attendance", "Headcount lock opgeheven.");
+                logDecision("attendance", "Vastzetting van het deelnemersaantal opgeheven.");
               }}
             >
-              Lock opheffen
+              Vastzetting opheffen
             </button>
           </div>
           <div className="rounded-[6px] border border-line px-3 py-2">
-            <div className="erp-label">Plan final at</div>
+            <div className="erp-label">Plan definitief op</div>
             <div className="erp-mono text-[13px] mt-0.5">
               {weekend.planFinalAt ? formatDateTime(weekend.planFinalAt) : "—"}
             </div>
             <div className="text-[11px] text-faint mt-0.5">
-              BOB lead time: {readiness.bobLeadTimeLabel}
+              Voorbereidingstijd voor de BOB: {readiness.bobLeadTimeLabel}
             </div>
             <button
               className="btn btn-sm mt-2"
               disabled={!weekend.planFinalAt}
               onClick={() => {
                 set("planFinalAt", null);
-                logDecision("other", "Plan-definitief markering verwijderd.");
+                logDecision("other", "Markering ‘plan definitief’ verwijderd.");
               }}
             >
               Markering wissen
@@ -247,68 +253,53 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* DECISION LOG ---------------------------------------------------- */}
-      <Card eyebrow="Decision log" title={`Besluiten (${decisions.length})`} padded={false}>
-        <div className="overflow-x-auto">
-          <table className="erp">
-            <thead>
-              <tr>
-                <th className="whitespace-nowrap">Tijdstip</th>
-                <th>Topic</th>
-                <th>Besluit</th>
-                <th className="w-[60px]" />
-              </tr>
-            </thead>
-            <tbody>
-              {decisions.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-muted">
-                    Nog geen besluiten vastgelegd.
-                  </td>
-                </tr>
-              )}
-              {decisions.map((d) => {
-                const h = hoursBetween(d.at, weekend.departureAt);
-                const lastMinute = h >= 0 && h < 24;
-                return (
-                  <tr key={d.id}>
-                    <td className="erp-mono whitespace-nowrap text-[12px]">
+      {/* BESLUITENLOG ------------------------------------------------------ */}
+      <Card
+        eyebrow="Besluitenlog"
+        title={`Besluiten (${decisions.length})`}
+        className="rise rise-4"
+      >
+        {decisions.length === 0 ? (
+          <div className="text-sm text-muted">Nog geen besluiten vastgelegd.</div>
+        ) : (
+          <ol className="relative pl-6">
+            <span className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-line" aria-hidden />
+            {decisions.map((d) => {
+              const h = hoursBetween(d.at, weekend.departureAt);
+              const lastMinute = h >= 0 && h < 24;
+              const override = d.summary.startsWith("OVERRIDE:");
+              return (
+                <li key={d.id} className="relative pb-2.5 group">
+                  <span
+                    className={`absolute -left-6 top-[6px] w-2.5 h-2.5 rounded-full viz-pop ${
+                      override ? "bg-warn" : lastMinute ? "bg-nogo" : "bg-cobalt"
+                    }`}
+                    aria-hidden
+                  />
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="erp-mono text-[11px] text-faint whitespace-nowrap">
                       {formatDateTime(d.at)}
-                    </td>
-                    <td>
-                      <Badge tone="neutral">{d.topic.toUpperCase()}</Badge>
-                    </td>
-                    <td className="text-[12.5px]">
-                      {d.summary}
-                      {lastMinute && (
-                        <Badge tone="nogo" className="ml-2">
-                          Last-minute
-                        </Badge>
-                      )}
-                      {d.summary.startsWith("OVERRIDE:") && (
-                        <Badge tone="warn" className="ml-2">
-                          Override
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => removeDecision(d.id)}
-                        aria-label="Besluit verwijderen"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </span>
+                    <Badge tone="neutral">{d.topic === "other" ? "Overig" : nl(d.topic)}</Badge>
+                    {lastMinute && <Badge tone="nogo">Last-minute</Badge>}
+                    {override && <Badge tone="warn">Override</Badge>}
+                    <button
+                      className="btn btn-sm btn-danger ml-auto shrink-0"
+                      onClick={() => removeDecision(d.id)}
+                      aria-label="Besluit verwijderen"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="text-[12.5px] leading-snug mt-0.5">{d.summary}</div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
 
-        <div className="px-4 py-3 border-t border-line grid grid-cols-1 sm:grid-cols-[180px_1fr_auto] gap-2 items-end">
-          <Field label="Topic">
+        <div className="mt-3 pt-3 border-t border-line grid grid-cols-1 sm:grid-cols-[180px_1fr_auto] gap-2 items-end">
+          <Field label="Onderwerp">
             <Select value={topic} onChange={setTopic} options={TOPIC_OPTIONS} />
           </Field>
           <Field label="Besluit">
@@ -324,14 +315,14 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* DANGER ZONE ----------------------------------------------------- */}
-      <Card eyebrow="Danger zone" title="Onomkeerbare acties">
+      {/* GEVARENZONE ------------------------------------------------------- */}
+      <Card eyebrow="Gevarenzone" title="Onomkeerbare acties" className="rise rise-5">
         <p className="text-[13px] text-muted leading-snug">
-          Het weekend wordt uit de lokale opslag verwijderd, inclusief deelnemers, reserveringen,
-          critical path, decision log en retrospective. Dit kan niet ongedaan gemaakt worden.
+          Het weekend verdwijnt uit de lokale opslag, inclusief deelnemers, reserveringen, kritiek
+          pad, besluitenlog en terugblik. Dit kan niet ongedaan gemaakt worden.
         </p>
         <button className="btn btn-danger btn-sm mt-3" onClick={deleteWeekend}>
-          <Trash2 size={13} /> Verwijder weekend
+          <Trash2 size={13} /> Weekend verwijderen
         </button>
       </Card>
     </div>

@@ -1,6 +1,6 @@
 # Pegasus HS1 · Teamweekend Control Room
 
-> HUP BLAUW. Operational Excellence Since 1998.
+> HUP BLAUW. Operationele excellentie sinds 1998.
 
 ERP-achtige planningsapplicatie voor de teamweekenden van **Pegasus Heren 1** (Superdivisie Heren, Nijmegen).
 Volkomen overdreven corporate governance voor een weekend weg met het team.
@@ -15,9 +15,9 @@ Volkomen overdreven corporate governance voor een weekend weg met het team.
 - **Transport Capacity 2.0**: effectieve passagierscapaciteit per auto op basis van cargo en bagage.
 - **Headcount lock** met aparte attendance voor wedstrijd, weekend, overnachting, zondag en diner; capacity mismatch.
 - **Food control**, **local event fallback**, compacte **runbook** met owner/status/deadline.
-- **Critical Drinking Path**: MATCH END → … → FIRST BEER met VALUE ADDING / BZT / LOGISTICS / WASTE en optimalisaties.
-- **Operational Quality Score** vs **Weekend Outcome Score** (Maaseik: "Questionable process. Acceptable result.").
-- **Bob Risk Index** (0-100, puur ludiek, nooit GO/NO GO).
+- **Kritiek Bierpad**: EINDE WEDSTRIJD → … → EERSTE BIER met WAARDE / BZT / LOGISTIEK / VERSPILLING en optimalisaties.
+- **Operational Quality Score** vs **Weekend Outcome Score** (Maaseik: "Twijfelachtig proces. Acceptabel resultaat.").
+- **Bob-risico-index** (0-100, puur ludiek, nooit GO/NO GO). Volledig Nederlandstalige UI, CSS-only animaties (reduced motion gerespecteerd).
 
 ## Stack
 

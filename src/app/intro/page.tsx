@@ -2,12 +2,45 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Tent, BedDouble, ShieldCheck, Beer, Route, CarFront, Users, Utensils, ClipboardList, Gauge } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  ArrowRight,
+  Tent,
+  BedDouble,
+  ShieldCheck,
+  Beer,
+  Route,
+  CarFront,
+  Users,
+  Utensils,
+  ClipboardList,
+  Gauge as GaugeIcon,
+} from "lucide-react";
 import { useStore } from "@/store/store";
-import { Badge, Callout, Card, PageHeader, StatusBadge } from "@/components/ui";
+import { Badge, Callout, Card, PageHeader, StatusBadge, toneForPercent } from "@/components/ui";
+import { Gauge, PhaseStepper } from "@/components/viz";
 import { retrospectiveScores, evaluateReadiness, bobRiskIndex } from "@/lib/engine";
 import { WEEKEND_PHASES } from "@/lib/types";
 import { nl } from "@/lib/labels";
+
+const LESSONS: { icon: ReactNode; text: string }[] = [
+  { icon: <Tent size={18} />, text: "Eigen tent is geen slaapplaats" },
+  { icon: <Utensils size={18} />, text: "Eten regel je vóór vertrek" },
+  { icon: <Beer size={18} />, text: "Vroeg dicht is geen avond" },
+  { icon: <CarFront size={18} />, text: "Stoelen minus bagage is capaciteit" },
+  { icon: <Users size={18} />, text: "Reserveren zonder aantal is gokken" },
+];
+
+const STEPS: { icon: ReactNode; title: string; seg: string; line: string }[] = [
+  { icon: <Users size={15} />, title: "Deelnemers", seg: "headcount", line: "Vijf losse statussen per persoon, daarna vergrendelen." },
+  { icon: <BedDouble size={15} />, title: "Slapen & eten", seg: "logistics", line: "Echt bed, check-in, reservering en keukensluiting." },
+  { icon: <Beer size={15} />, title: "Avondprogramma", seg: "nightlife", line: "Haalbaarheidsscore, BZT en groepssplitsingsrisico." },
+  { icon: <CarFront size={15} />, title: "Vervoer", seg: "transport", line: "Effectieve stoelen = stoelen min bagage." },
+  { icon: <Route size={15} />, title: "Kritiek Bierpad", seg: "critical-path", line: "Van EINDE WEDSTRIJD tot EERSTE BIER, stap voor stap." },
+  { icon: <ShieldCheck size={15} />, title: "Gereedheid", seg: "readiness", line: "Checks, vier deadlines en de GO / NO GO-poort." },
+  { icon: <ClipboardList size={15} />, title: "Draaiboek", seg: "runbook", line: "Eén pagina voor onderweg, met eigenaar en deadline." },
+  { icon: <GaugeIcon size={15} />, title: "Terugblik", seg: "retrospective", line: "Beleving en operationele kwaliteit los van elkaar." },
+];
 
 export default function IntroPage() {
   const { state, now } = useStore();
@@ -19,213 +52,174 @@ export default function IntroPage() {
     .filter((w) => w.phase !== "COMPLETED")
     .sort((a, b) => a.departureAt.localeCompare(b.departureAt))[0];
   const nextReadiness = next ? evaluateReadiness(next, now) : null;
+  const nextBob = next ? bobRiskIndex(next, now) : null;
+  const tabHref = (seg: string) => (next ? `/weekends/${next.slug}/${seg}` : "/weekends");
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Module 0 · Onboarding"
+        eyebrow="Module 0 · Inwerken"
         title="Introductie"
-        subtitle="Waarom Pegasus Heren 1 een ERP heeft voor een weekendje weg, en hoe je het gebruikt."
+        subtitle="Waarom Pegasus Heren 1 een ERP heeft voor een weekendje weg — en hoe je het gebruikt."
         actions={
           <Link href="/" className="btn btn-primary">
-            Naar de Control Room <ArrowRight size={14} />
+            Naar de Controlekamer <ArrowRight size={14} />
           </Link>
         }
       />
 
-      {/* Mission statement */}
-      <section className="card-navy stripe px-5 py-6 sm:px-8 sm:py-8">
+      {/* Missie */}
+      <section className="card-navy stripe px-5 py-6 sm:px-8 sm:py-7 rise rise-1">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
           <Image src="/pegasus-logo-256.png" alt="Pegasus Volleybal" width={96} height={96} className="rounded bg-white/95 p-1 shrink-0" />
           <div className="min-w-0">
-            <div className="erp-label">Mission statement</div>
+            <div className="erp-label">Missie</div>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1">
               Nooit meer een teamweekend op een camping.
             </h2>
-            <p className="text-white/80 text-sm mt-3 leading-relaxed max-w-3xl">
-              Dit systeem is in het leven geroepen na het teamweekend in Maaseik: zeven tentplaatsen, twee man per
-              tent, maximaal circa drie vierkante meter per tent, tenten en ontbijt zelf regelen. Het werd een
-              geweldig weekend. Het was ook een operationele ramp. Die twee dingen mogen nooit meer met elkaar
+            <p className="text-white/80 text-sm mt-2.5 leading-relaxed max-w-2xl">
+              Maaseik werd een geweldig weekend én een operationele ramp. Die twee dingen mogen nooit meer met elkaar
               verward worden.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Badge tone="nogo">
-                <Tent size={11} /> Camping = FAIL op Beds
+                <Tent size={11} /> Camping = {nl("FAIL")} op bedden
               </Badge>
               <Badge tone="go">
-                <BedDouble size={11} /> Daadwerkelijk bed = PASS
+                <BedDouble size={11} /> Echt bed = {nl("PASS")}
               </Badge>
-              <Badge tone="navy">Hup blauw.</Badge>
+              <Badge tone="navy">HUP BLAUW.</Badge>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card eyebrow="Waarom" title="Het probleem" className="lg:col-span-2">
-          <div className="text-sm text-muted space-y-3 leading-relaxed">
-            <p>
-              Een teamweekend organiseren gaat in de praktijk zo: iemand vindt een goedkope slaapplek, de groepsgrootte
-              blijft tot vlak voor vertrek onduidelijk, eten en avondprogramma zijn “wel te regelen ter plaatse”, en
-              de autoverdeling wordt op de parkeerplaats bij Ark van Oost bedacht. Soms loopt dat goed af. In Maaseik
-              liep het gezellig af, maar niet goed: het restaurant was vol, de lokale horeca sloot vroeg, de stad
-              vereiste een taxirit en de kampeerspullen halveerden de autocapaciteit.
+      {/* Het probleem, visueel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+        <Card eyebrow="Waarom" title="Twee assen, niet één cijfer" className="lg:col-span-2 rise rise-2">
+          <div className="flex flex-wrap items-center justify-center gap-6 py-1">
+            <Gauge
+              value={maaseikScores ? maaseikScores.out.score : 0}
+              max={10}
+              size={128}
+              decimals={1}
+              tone={maaseikScores && maaseikScores.out.score >= 7.5 ? "go" : "warn"}
+              label="Weekendbeleving"
+              sublabel="/ 10"
+            />
+            <Gauge
+              value={maaseikScores ? maaseikScores.ops.score : 0}
+              max={100}
+              size={128}
+              tone={maaseikScores ? toneForPercent(maaseikScores.ops.score) : "unknown"}
+              label="Operationele kwaliteit"
+              sublabel="/ 100"
+            />
+            <p className="text-[13px] text-muted leading-snug flex-1 min-w-[200px]">
+              Maaseik, dezelfde 48 uur, twee heel verschillende cijfers. Eén score (&ldquo;was het leuk?&rdquo;) poetst
+              elke organisatorische zonde weg, dus meet dit systeem beleving en proces apart.
+              {maaseikScores && (
+                <span className="block font-semibold text-navy mt-1.5">{maaseikScores.classification}</span>
+              )}
             </p>
-            <p>
-              De kern van het probleem is dat één cijfer (“was het leuk?”) alle organisatorische zonden wegpoetst.
-              Daarom meet dit systeem twee dingen apart:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="card px-4 py-3">
-                <div className="erp-label">Weekend Outcome Score</div>
-                <div className="erp-mono text-2xl font-semibold text-navy mt-1">
-                  {maaseikScores ? maaseikScores.out.score.toFixed(1) : "—"}
-                  <span className="text-sm text-faint font-medium"> / 10</span>
-                </div>
-                <div className="text-[12px] text-muted mt-1">Hoe was het? Gezelligheid, avond, accommodatie, activiteit.</div>
-              </div>
-              <div className="card px-4 py-3">
-                <div className="erp-label">Operational Quality Score</div>
-                <div className="erp-mono text-2xl font-semibold text-nogo mt-1">
-                  {maaseikScores ? maaseikScores.ops.score : "—"}
-                  <span className="text-sm text-faint font-medium"> / 100</span>
-                </div>
-                <div className="text-[12px] text-muted mt-1">Hoe is het georganiseerd? Last-minute besluiten, wachten, splitsingen.</div>
-              </div>
-            </div>
-            {maaseikScores && (
-              <p className="font-semibold text-navy">
-                Maaseik: “{maaseikScores.classification}” — en precies daarom bestaat dit systeem.
-              </p>
-            )}
           </div>
         </Card>
 
-        <Card eyebrow="De les van Maaseik" title="GOOD WEEKEND OUTCOME ≠ GOOD OPERATIONAL PLANNING">
-          <ul className="text-[13px] text-muted space-y-2">
-            <li className="flex gap-2"><Tent size={14} className="mt-0.5 shrink-0 text-nogo" /> Zelf een tent regelen is geen slaapplaats. Het is een risico dat je meeneemt.</li>
-            <li className="flex gap-2"><Utensils size={14} className="mt-0.5 shrink-0 text-nogo" /> “Wat eten we eigenlijk?” hoort niet op zaterdagavond ter plaatse gesteld te worden.</li>
-            <li className="flex gap-2"><Beer size={14} className="mt-0.5 shrink-0 text-nogo" /> Een kroeg op loopafstand die vroeg sluit is geen avondprogramma.</li>
-            <li className="flex gap-2"><CarFront size={14} className="mt-0.5 shrink-0 text-nogo" /> Stoelen zijn geen capaciteit. Stoelen minus bagage is capaciteit.</li>
-            <li className="flex gap-2"><Users size={14} className="mt-0.5 shrink-0 text-nogo" /> Reserveren met een onbekende groepsgrootte is gokken.</li>
-          </ul>
+        <Card eyebrow="De les van Maaseik" title="EEN GOED WEEKEND ≠ EEN GOED GEORGANISEERD WEEKEND" className="rise rise-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+            {LESSONS.map((l) => (
+              <div key={l.text} className="flex items-center gap-2.5 rounded-[6px] border border-line bg-sunken px-2.5 py-2">
+                <span className="shrink-0 w-8 h-8 rounded bg-nogo-bg text-nogo flex items-center justify-center">{l.icon}</span>
+                <span className="text-[12.5px] font-semibold text-navy leading-snug">{l.text}</span>
+              </div>
+            ))}
+          </div>
           {maaseik && (
             <div className="mt-3 pt-3 border-t border-line grid grid-cols-2 gap-2 text-[12px]">
               <div>
-                <div className="erp-label">BOB lead time</div>
+                <div className="erp-label">Bob-aanlooptijd</div>
                 <div className="erp-mono font-semibold text-nogo">{maaseikLead !== null ? `${Math.round(maaseikLead)}u` : "—"}</div>
               </div>
               <div>
-                <div className="erp-label">Bob Risk Index</div>
-                <div className="erp-mono font-semibold text-nogo">{maaseikBob ? `${maaseikBob.score} · ${maaseikBob.level}` : "—"}</div>
+                <div className="erp-label">Bob-risico-index</div>
+                <div className="erp-mono font-semibold text-nogo">{maaseikBob ? `${maaseikBob.score} · ${nl(maaseikBob.level)}` : "—"}</div>
               </div>
             </div>
           )}
           <Link href="/history" className="btn btn-sm mt-3">
-            Volledige retrospective <ArrowRight size={12} />
+            Volledige terugblik <ArrowRight size={12} />
           </Link>
         </Card>
       </div>
 
-      {/* How it works */}
-      <Card eyebrow="Hoe het werkt" title="Van DRAFT naar COMPLETED in zes fases" padded={false}>
+      {/* Hoe het werkt */}
+      <Card eyebrow="Hoe het werkt" title="Van CONCEPT naar AFGEROND in zes fases" padded={false} className="rise rise-4">
         <div className="px-4 py-4">
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {WEEKEND_PHASES.map((p, i) => (
-              <div key={p} className="flex items-center gap-1.5">
-                <Badge tone={p === "LOCKED" ? "navy" : p === "LIVE" || p === "READY" ? "go" : p === "PLANNING" ? "warn" : "unknown"}>{nl(p)}</Badge>
-                {i < WEEKEND_PHASES.length - 1 && <ArrowRight size={12} className="text-faint" />}
-              </div>
+          <PhaseStepper phases={WEEKEND_PHASES} current={next?.phase ?? "PLANNING"} labels={nl} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 mt-5">
+            {STEPS.map((s, i) => (
+              <Link key={s.seg} href={tabHref(s.seg)} className="card card-hover px-3 py-2.5 flex gap-2.5">
+                <span className="shrink-0 w-8 h-8 rounded bg-navy text-white flex items-center justify-center">{s.icon}</span>
+                <span className="min-w-0">
+                  <span className="block font-bold text-navy text-[13px]">
+                    <span className="erp-mono text-faint mr-1.5">{String(i + 1).padStart(2, "0")}</span>
+                    {s.title}
+                  </span>
+                  <span className="block text-[11.5px] text-muted leading-snug mt-0.5">{s.line}</span>
+                </span>
+              </Link>
             ))}
           </div>
-          <ol className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[13px]">
-            <Step n={1} icon={<Users size={15} />} title="Headcount" href="headcount">
-              Elke deelnemer krijgt aparte status voor wedstrijd, weekend, overnachting, zondag en diner. Pas als niemand
-              meer “unknown” is, wordt de headcount gelocked. Reserveringen worden daarna live tegen dat aantal gecontroleerd.
-            </Step>
-            <Step n={2} icon={<BedDouble size={15} />} title="Stay & Food" href="logistics">
-              Accommodatie met daadwerkelijke bedden, check-in en toegangscode. Eten is geen vrije tekst maar een plan met
-              locatie, reservering, tijd en keukensluiting. Onbekend eten geeft direct een FAIL.
-            </Step>
-            <Step n={3} icon={<Beer size={15} />} title="Nightlife" href="nightlife">
-              Elke avondbestemming krijgt een Nightlife Viability Score en een Group Split Risk. Het systeem rekent de
-              BZT uit: Bier Zuip Tijd, de tijd waarin het team daadwerkelijk samen kan zijn.
-            </Step>
-            <Step n={4} icon={<CarFront size={15} />} title="Transport" href="transport">
-              Per auto: chauffeur, stoelen, cargo en bagage. Effectieve capaciteit moet de reizigers dekken, anders
-              waarschuwt het systeem. Kampeerspullen zijn hier bewust de slechtst denkbare bagage.
-            </Step>
-            <Step n={5} icon={<Route size={15} />} title="Critical Drinking Path" href="critical-path">
-              Zaterdagavond als critical path: van MATCH END tot FIRST BEER, met elke stap gelabeld als value adding,
-              BZT, logistiek of pure waste. Het systeem toont welke stap overslaan hoeveel minuten oplevert.
-            </Step>
-            <Step n={6} icon={<ShieldCheck size={15} />} title="Readiness gate" href="readiness">
-              Twaalf checks, vier deadlines (T-7D, T-72H, T-24H, DEPARTURE) en een BOB lead time. LOCKED kan alleen als
-              alle gating checks PASS zijn. Wie toch wil, doet een governance-override die in het decision log komt.
-            </Step>
-            <Step n={7} icon={<ClipboardList size={15} />} title="Runbook" href="runbook">
-              Eén compacte operationele pagina voor onderweg: checklist met owner, status en deadline, toegangsgegevens
-              en teamspullen. Geen paklijst van drie pagina&apos;s.
-            </Step>
-            <Step n={8} icon={<Gauge size={15} />} title="Retrospective" href="retrospective">
-              Na afloop twee losse scores: Weekend Outcome (hoe was het) en Operational Quality (hoe was het geregeld).
-              De classificatie zegt de rest. Lessen komen in Lessons Learned.
-            </Step>
-          </ol>
         </div>
       </Card>
 
-      {/* Two KPIs explained */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card eyebrow="Serieuze KPI" title="Readiness">
-          <p className="text-[13px] text-muted leading-relaxed">
-            Het percentage gating checks dat PASS is (WARNING telt half). Onder 80% of met een FAIL of UNKNOWN op een
-            gating check mag een weekend niet LOCKED worden. De gate wordt niet automatisch NO GO omdat planning nog niet
-            af is; hij laat wel zien welk risico ontstaat als beslissingen te laat vallen.
-          </p>
+      {/* De twee KPI's */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card eyebrow="Serieuze KPI" title="Gereedheid" className="rise rise-5">
+          <div className="flex items-center gap-4">
+            <Gauge
+              value={nextReadiness?.percent ?? 0}
+              size={104}
+              suffix="%"
+              tone={toneForPercent(nextReadiness?.percent ?? 0)}
+            />
+            <p className="text-[13px] text-muted leading-snug">
+              Aandeel checks op {nl("PASS")} ({nl("WARNING")} telt half). Onder 80% of met één {nl("FAIL")} of{" "}
+              {nl("UNKNOWN")} op een blokkerende check kan een weekend niet {nl("LOCKED")} worden.
+            </p>
+          </div>
           {next && nextReadiness && (
-            <div className="mt-3 card px-3 py-2 flex flex-wrap items-center gap-2 text-[12px]">
+            <div className="mt-3 rounded-[6px] border border-line bg-sunken px-3 py-2 flex flex-wrap items-center gap-2 text-[12px]">
               <span className="font-semibold text-navy">{next.name}</span>
               <StatusBadge status={nextReadiness.gate} />
-              <span className="erp-mono">READINESS {nextReadiness.percent}%</span>
               <Link href={`/weekends/${next.slug}/readiness`} className="btn btn-sm ml-auto">
-                Open gate <ArrowRight size={12} />
+                Open poort <ArrowRight size={12} />
               </Link>
             </div>
           )}
         </Card>
-        <Card eyebrow="Ludieke KPI" title="Bob Risk Index">
-          <p className="text-[13px] text-muted leading-relaxed">
-            Van 0 tot 100, uitsluitend op basis van echte planningdata: zelf een tent regelen, eten onbekend, headcount
-            niet gelocked, taxi niet geregeld. Verlagend: hotel bevestigd, eten gereserveerd, kroeg op loopafstand, plan
-            meer dan 72 uur vooraf compleet. De index telt nooit mee in GO/NO GO.
-          </p>
-          <Callout tone="unknown" title="Tooltip">One Bob is enough.</Callout>
+        <Card eyebrow="Ludieke KPI" title="Bob-risico-index" className="rise rise-6">
+          <div className="flex items-center gap-4">
+            <Gauge
+              value={nextBob?.score ?? 0}
+              size={104}
+              tone={nextBob && nextBob.score >= 70 ? "nogo" : nextBob && nextBob.score >= 25 ? "warn" : "go"}
+              label={nextBob ? nl(nextBob.level) : undefined}
+            />
+            <p className="text-[13px] text-muted leading-snug">
+              0–100 op basis van échte planningdata: geen bed, eten onbekend, taxi niet geregeld omhoog; hotel
+              bevestigd, eten gereserveerd, kroeg op loopafstand omlaag. Telt nooit mee in GO / NO GO.
+            </p>
+          </div>
+          <Callout tone="unknown" title="Tooltip">Eén Bob is genoeg.</Callout>
         </Card>
       </div>
 
       <Callout tone="neutral" title="Werkwijze">
-        Alle data staat in deze browser (localStorage). Exporteer via <Link href="/settings" className="underline">System</Link> als
-        je een plan wilt delen, en gebruik daar de simulatieklok om te zien hoe de deadlines eruitzien op T-24H.
-        Begrippen staan in de <Link href="/glossary" className="underline">Glossary</Link>.
+        Alle data staat in deze browser. Exporteren en de simulatieklok vind je bij{" "}
+        <Link href="/settings" className="underline">Systeem</Link>; uitleg van de termen bij{" "}
+        <Link href="/glossary" className="underline">Begrippen</Link>.
       </Callout>
     </div>
-  );
-}
-
-function Step({ n, icon, title, href, children }: { n: number; icon: React.ReactNode; title: string; href: string; children: React.ReactNode }) {
-  return (
-    <li className="card px-4 py-3 flex gap-3">
-      <div className="shrink-0 w-8 h-8 rounded bg-navy text-white flex items-center justify-center">{icon}</div>
-      <div className="min-w-0">
-        <div className="font-bold text-navy text-sm">
-          <span className="erp-mono text-faint mr-1.5">{String(n).padStart(2, "0")}</span>
-          {title}
-        </div>
-        <p className="text-muted mt-0.5 leading-snug">{children}</p>
-        <div className="text-[11px] text-faint mt-1">Tab: {href}</div>
-      </div>
-    </li>
   );
 }

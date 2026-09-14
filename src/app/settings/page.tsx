@@ -23,12 +23,12 @@ interface BrandToken {
 }
 
 const BRAND_TOKENS: BrandToken[] = [
-  { token: "navy", hex: "#000d44", official: true, note: "custom-prussian-blue van pegasusvolleybal.com — koppen, nav, footer." },
+  { token: "navy", hex: "#000d44", official: true, note: "custom-prussian-blue van pegasusvolleybal.com — koppen, navigatie, voettekst." },
   { token: "sky", hex: "#77aadf", official: true, note: "Accent lichtblauw van pegasusvolleybal.com — links en knoppen." },
   { token: "silver", hex: "#b5bdbc", official: true, note: "Logo-grijs (accent-5 op de clubsite)." },
-  { token: "navy-2", hex: "#001a6e", official: false, note: "Fallback: verloop-partner van navy in dashboards." },
-  { token: "cobalt", hex: "#0a3fb8", official: false, note: "Fallback: dominant cobalt blue voor primaire knoppen." },
-  { token: "royal", hex: "#2563eb", official: false, note: "Fallback: royal blue voor focusstates." },
+  { token: "navy-2", hex: "#001a6e", official: false, note: "Terugvaloptie: verloop-partner van navy in dashboards." },
+  { token: "cobalt", hex: "#0a3fb8", official: false, note: "Terugvaloptie: dominant kobaltblauw voor primaire knoppen." },
+  { token: "royal", hex: "#2563eb", official: false, note: "Terugvaloptie: koningsblauw voor focusstaten." },
 ];
 
 export default function SystemSettingsPage() {
@@ -85,21 +85,21 @@ export default function SystemSettingsPage() {
     };
     dispatch({ type: "hydrate", state: next });
     setImportText("");
-    setMessage({ tone: "go", text: `Geïmporteerd: ${next.weekends.length} weekend(s).` });
+    setMessage({ tone: "go", text: `Ingelezen: ${next.weekends.length} weekend(s).` });
   }
 
   function resetToSeed() {
-    if (!window.confirm("Alle lokale wijzigingen worden verwijderd en vervangen door de seeddata. Doorgaan?")) return;
+    if (!window.confirm("Alle lokale wijzigingen worden verwijderd en vervangen door de startgegevens. Doorgaan?")) return;
     dispatch({ type: "reset" });
-    setMessage({ tone: "go", text: "Teruggezet naar seeddata." });
+    setMessage({ tone: "go", text: "Teruggezet naar de startgegevens." });
   }
 
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="System"
-        title="Systeeminstellingen"
-        subtitle="Simulatieklok, databeheer en colofon. Alles draait client-side; er is geen backend."
+        eyebrow="Beheer"
+        title="Systeem"
+        subtitle="Simulatieklok, gegevensbeheer en colofon. Alles draait in de browser; er is geen server."
       />
 
       {message && (
@@ -108,7 +108,7 @@ export default function SystemSettingsPage() {
         </Callout>
       )}
 
-      <Card eyebrow="Simulation" title="Klok">
+      <Card eyebrow="Simulatie" title="Klok" className="rise rise-1">
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
           <div>
             <div className="erp-label">Huidige app-tijd</div>
@@ -121,7 +121,7 @@ export default function SystemSettingsPage() {
               )}
             </div>
           </div>
-          <Field label="Clock override" hint="Zet de app-tijd op een gekozen moment.">
+          <Field label="Afwijkende app-tijd" hint="Zet de app-tijd op een gekozen moment.">
             <DateTimeInput
               value={state.clockOverride ?? now}
               onChange={(iso) => dispatch({ type: "setClock", iso })}
@@ -136,19 +136,19 @@ export default function SystemSettingsPage() {
           </button>
         </div>
         <p className="text-[12px] text-muted mt-3 leading-snug">
-          De simulatieklok raakt uitsluitend de tijdgebonden berekeningen: deadlines (T-7D, T-72H, T-24H, DEPARTURE),
-          countdowns, de risk narrative en daarmee de gate-uitkomst. Opgeslagen gegevens, attendance, reserveringen en
-          retrospectives veranderen er niet door.
+          De simulatieklok raakt alleen tijdgebonden berekeningen: deadlines (T-7 dagen, T-72 uur, T-24 uur, vertrek),
+          afteltijden, de risicotekst en daarmee de poortuitkomst. Opgeslagen gegevens veranderen er niet door.
         </p>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
         <Card
-          eyebrow="Data"
-          title="Export"
+          eyebrow="Gegevens"
+          title="Exporteren"
+          className="rise rise-2"
           actions={
             <button className="btn btn-sm" onClick={download}>
-              <Download size={13} /> Download JSON
+              <Download size={13} /> Bewaar JSON
             </button>
           }
         >
@@ -157,7 +157,7 @@ export default function SystemSettingsPage() {
             readOnly
             value={exportJson}
             spellCheck={false}
-            aria-label="Export JSON"
+            aria-label="Uitvoer in JSON"
           />
           <p className="text-[11.5px] text-faint mt-2">
             {state.weekends.length} weekend(s) · versie {state.version} · {Math.ceil(exportJson.length / 1024)} kB.
@@ -165,11 +165,12 @@ export default function SystemSettingsPage() {
         </Card>
 
         <Card
-          eyebrow="Data"
-          title="Import"
+          eyebrow="Gegevens"
+          title="Inlezen"
+          className="rise rise-3"
           actions={
             <button className="btn btn-sm btn-primary" onClick={runImport} disabled={importText.trim() === ""}>
-              <Upload size={13} /> Importeer
+              <Upload size={13} /> Inlezen
             </button>
           }
         >
@@ -178,7 +179,7 @@ export default function SystemSettingsPage() {
             value={importText}
             spellCheck={false}
             placeholder='{"version": 1, "weekends": [...], "clockOverride": null}'
-            aria-label="Import JSON"
+            aria-label="Invoer in JSON"
             onChange={(e) => setImportText(e.target.value)}
           />
           <p className="text-[11.5px] text-faint mt-2">
@@ -188,23 +189,23 @@ export default function SystemSettingsPage() {
         </Card>
       </div>
 
-      <Card eyebrow="Danger zone" title="Reset">
+      <Card eyebrow="Gevarenzone" title="Terugzetten" className="rise rise-4">
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn btn-danger" onClick={resetToSeed}>
-            <RotateCcw size={14} /> Reset naar seed
+            <RotateCcw size={14} /> Terug naar startgegevens
           </button>
           <span className="text-[12px] text-muted">
-            Vervangt alles door de meegeleverde seeddata (Maaseik + het planningsweekend). Niet terug te draaien.
+            Vervangt alles door de meegeleverde startgegevens (Maaseik + het planningsweekend). Niet terug te draaien.
           </span>
         </div>
       </Card>
 
-      <Card eyebrow="Colofon" title="Brand tokens" padded={false}>
+      <Card eyebrow="Colofon" title="Merkkleuren" padded={false} className="rise rise-5">
         <div className="overflow-x-auto">
           <table className="erp">
             <thead>
               <tr>
-                <th>Token</th>
+                <th>Naam</th>
                 <th>Hex</th>
                 <th>Herkomst</th>
                 <th>Gebruik</th>
@@ -224,7 +225,7 @@ export default function SystemSettingsPage() {
                   </td>
                   <td className="erp-mono whitespace-nowrap">{t.hex}</td>
                   <td className="whitespace-nowrap">
-                    {t.official ? <Badge tone="go">OFFICIEEL</Badge> : <Badge tone="unknown">FALLBACK</Badge>}
+                    {t.official ? <Badge tone="go">OFFICIEEL</Badge> : <Badge tone="unknown">TERUGVAL</Badge>}
                   </td>
                   <td className="text-[12px] text-muted">{t.note}</td>
                 </tr>
@@ -234,21 +235,18 @@ export default function SystemSettingsPage() {
         </div>
         <div className="px-4 py-3 border-t border-line text-[12px] text-muted space-y-1.5">
           <p>
-            Officieel = overgenomen uit het thema van pegasusvolleybal.com. Fallback = niet-officiële ERP-tint, gekozen
-            omdat de club er geen gepubliceerde hexcode voor heeft. Groen, amber en rood zijn statuskleuren, geen
-            clubkleuren: groen uitsluitend voor GO/PASS, amber voor warnings, rood voor NO GO.
+            Officieel = overgenomen van pegasusvolleybal.com. Terugval = niet-officiële tint, omdat de club er geen
+            gepubliceerde hexcode voor heeft. Groen, amber en rood zijn statuskleuren, geen clubkleuren: groen alleen
+            voor GO, amber voor waarschuwingen, rood voor NO GO.
           </p>
-          <p>
-            Typografie: Poppins (clubsite) voor tekst, JetBrains Mono voor cijfers en codes.
-          </p>
+          <p>Typografie: Poppins voor tekst, JetBrains Mono voor cijfers en codes.</p>
         </div>
       </Card>
 
       <Callout tone="neutral" title="Opslag">
-        Alle gegevens staan uitsluitend in de localStorage van deze browser (sleutel{" "}
-        <span className="erp-mono">pegasus-teamweekend-erp-v1</span>). Er is geen server, geen account en geen
-        synchronisatie: een andere browser of een geleegde cache betekent een lege staat. Gebruik Export voor een
-        back-up.
+        Alle gegevens staan alleen in de localStorage van deze browser (sleutel{" "}
+        <span className="erp-mono">pegasus-teamweekend-erp-v1</span>). Geen server, geen account, geen synchronisatie:
+        een andere browser of een geleegde cache betekent een lege staat. Maak een reservekopie via Exporteren.
       </Callout>
     </div>
   );

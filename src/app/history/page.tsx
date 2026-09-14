@@ -20,20 +20,22 @@ import {
   EmptyState,
   PageHeader,
   PhaseBadge,
+  toneForPercent,
   toneForStatus,
   type Tone,
 } from "@/components/ui";
+import { Gauge, SeatGrid, StackedBar, type Segment } from "@/components/viz";
+import { nl } from "@/lib/labels";
 
-const CARGO_LABEL: Record<string, string> = {
-  small: "Klein",
-  medium: "Middel",
-  large: "Groot",
-};
-const LOAD_LABEL: Record<string, string> = {
-  low: "Laag",
-  medium: "Gemiddeld",
-  high: "Hoog",
-};
+/** Vaste kleurenreeks voor de aftrekposten; de rest van de 100 punten blijft groen. */
+const DEDUCTION_COLORS = [
+  "var(--nogo)",
+  "var(--warn)",
+  "var(--pegasus-cobalt)",
+  "var(--pegasus-navy)",
+  "var(--pegasus-sky)",
+  "var(--pegasus-silver)",
+];
 
 export default function HistoryPage() {
   const { state } = useStore();
@@ -44,31 +46,29 @@ export default function HistoryPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Archief · Post-mortem"
-        title="Lessons Learned"
-        subtitle="Afgeronde teamweekenden, beoordeeld op twee onafhankelijke assen: beleving en proces."
+        eyebrow="Archief · Nabeschouwing"
+        title="Geleerde lessen"
+        subtitle="Afgeronde teamweekenden op twee onafhankelijke assen: beleving en proces."
       />
 
-      <div className="card-navy stripe px-4 sm:px-5 py-4">
+      <div className="card-navy stripe px-4 sm:px-5 py-4 rise rise-1">
         <div className="erp-label">Kernconclusie</div>
         <p className="text-sm sm:text-base font-bold tracking-tight mt-1">
-          GOOD WEEKEND OUTCOME ≠ GOOD OPERATIONAL PLANNING
+          EEN GOED WEEKEND ≠ EEN GOED GEORGANISEERD WEEKEND
         </p>
         <p className="text-[13px] text-white/75 mt-1.5 leading-snug">
-          Een chaotisch georganiseerd weekend kan alsnog gezellig zijn. Dat is geen bewijs dat de planning klopte —
-          het is bewijs dat het team veerkrachtig is. De readiness gate meet het proces, niet de gezelligheid.
+          Gezellig geworden bewijst dat het team veerkrachtig is, niet dat de planning klopte.
         </p>
       </div>
 
       <Callout tone="neutral" title="Bronvermelding">
-        Uitsluitend gedocumenteerde kenmerken zijn gebruikt: accommodatienotities, samenvatting, decision log en de
-        vastgelegde lessons learned. Alles wat hier staat komt uit die records of is er rechtstreeks uit berekend.
-        Er is niets aangevuld of als feit aangenomen dat niet is vastgelegd; ontbrekende gegevens blijven leeg.
+        Alleen vastgelegde kenmerken: notities, samenvatting, besluitenlog en terugblik. Niets aangevuld; ontbrekende
+        gegevens blijven leeg.
       </Callout>
 
       {cases.length === 0 ? (
-        <EmptyState title="Nog geen afgeronde weekends">
-          Zodra een weekend op COMPLETED staat verschijnt hier de case.
+        <EmptyState title="Nog geen afgeronde weekenden">
+          Zodra een weekend op {nl("COMPLETED")} staat verschijnt hier de casus.
         </EmptyState>
       ) : (
         cases.map((w) => <CaseCard key={w.id} weekend={w} />)
@@ -84,100 +84,119 @@ function CaseCard({ weekend: w }: { weekend: Weekend }) {
   const scores = w.retrospective.filled ? retrospectiveScores(w.retrospective, w) : null;
   const lastMinute = w.decisions.filter((d) => hoursBetween(d.at, w.departureAt) < 24);
 
+  const deductionSegments: Segment[] = scores
+    ? [
+        ...scores.ops.deductions.map((d, i) => ({
+          label: d.label,
+          value: d.points,
+          color: DEDUCTION_COLORS[i % DEDUCTION_COLORS.length],
+        })),
+        { label: "Resterend", value: scores.ops.score, tone: "go" as const },
+      ]
+    : [];
+
   return (
-    <Card padded={false} className="overflow-hidden">
+    <Card padded={false} className="overflow-hidden rise rise-2">
       <header className="px-4 py-3 border-b border-line flex flex-wrap items-center gap-2">
         <div className="min-w-0">
-          <div className="erp-label">Case · {w.season} · {w.city}</div>
+          <div className="erp-label">Casus · {w.season} · {w.city}</div>
           <h2 className="text-base font-extrabold tracking-tight text-navy">{w.name}</h2>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <PhaseBadge phase={w.phase} />
-          {w.historical && <Badge tone="neutral">HISTORISCHE CASE</Badge>}
+          {w.historical && <Badge tone="neutral">HISTORISCHE CASUS</Badge>}
           <span className="erp-mono text-[11.5px] text-faint">{formatDate(w.departureAt, { year: "numeric" })}</span>
         </div>
       </header>
 
       {scores && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-line border-b border-line">
-          <div className="bg-elev px-4 py-4">
-            <div className="erp-label">Weekend outcome</div>
-            <div className="erp-mono text-5xl font-semibold leading-none mt-1 text-navy">
-              {scores.out.score.toFixed(1)}
-              <span className="text-lg text-faint">/10</span>
-            </div>
-            <div className="text-[11.5px] text-muted mt-1">Beleving van het team.</div>
-          </div>
-          <div className="bg-elev px-4 py-4">
-            <div className="erp-label">Operational quality</div>
-            <div
-              className={`erp-mono text-5xl font-semibold leading-none mt-1 ${scores.ops.score >= 70 ? "text-navy" : "text-nogo"}`}
-            >
-              {scores.ops.score}
-              <span className="text-lg text-faint">/100</span>
-            </div>
-            <div className="text-[11.5px] text-muted mt-1">Kwaliteit van de voorbereiding.</div>
-          </div>
-          <div className="bg-elev px-4 py-4 flex items-center">
-            <div>
-              <div className="erp-label">Classificatie</div>
-              <div className="text-sm font-bold text-navy mt-1 leading-snug">{scores.classification}</div>
+        <div className="px-4 py-4 border-b border-line flex flex-wrap items-center gap-6">
+          <Gauge
+            value={scores.out.score}
+            max={10}
+            size={124}
+            decimals={1}
+            tone={scores.out.score >= 7.5 ? "go" : "warn"}
+            label="Weekendbeleving"
+            sublabel="/ 10"
+          />
+          <Gauge
+            value={scores.ops.score}
+            max={100}
+            size={124}
+            tone={toneForPercent(scores.ops.score)}
+            label="Operationele kwaliteit"
+            sublabel="/ 100"
+          />
+          <div className="flex-1 min-w-[200px]">
+            <div className="erp-label">Classificatie</div>
+            <div className="text-sm font-bold text-navy mt-1 leading-snug">{scores.classification}</div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {scores.out.parts.map((p) => (
+                <span key={p.label} className="rounded-[4px] border border-line bg-sunken px-1.5 py-0.5 text-[11px]">
+                  {p.label} <span className="erp-mono font-semibold">{p.value}</span>
+                  <span className="text-faint">/10</span>
+                </span>
+              ))}
             </div>
           </div>
         </div>
       )}
 
       <div className="px-4 py-4 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <MiniStat
+            label="Bob-aanlooptijd"
+            value={readiness.bobLeadTimeHours === null ? "—" : `${Math.round(readiness.bobLeadTimeHours)}u`}
+            note={readiness.bobLeadTimeLabel}
+          />
+          <MiniStat
+            label="Bob-index bij vertrek"
+            value={`${bob.score}`}
+            note={nl(bob.level)}
+            tone={toneForStatus(bob.level)}
+            title={bob.tooltip}
+          />
+          <MiniStat
+            label="Groepssplitsingsrisico"
+            value={nl(split.level)}
+            note={split.reason}
+            tone={toneForStatus(split.level)}
+          />
+          <MiniStat
+            label="Gereedheid bij vertrek"
+            value={`${readiness.percent}%`}
+            note={`${readiness.failCount}× ${nl("FAIL")} · ${readiness.unknownCount}× ${nl("UNKNOWN")}`}
+            tone={toneForPercent(readiness.percent)}
+          />
+        </div>
+
         {w.summary && (
           <section>
-            <div className="erp-label mb-1">Gedocumenteerde samenvatting</div>
+            <div className="erp-label mb-1">Vastgelegde samenvatting</div>
             <p className="text-[13px] text-muted leading-snug">{w.summary}</p>
           </section>
         )}
 
         {w.accommodation.notes && (
           <section>
-            <div className="erp-label mb-1">Accommodatie — vastgelegde kenmerken</div>
+            <div className="erp-label mb-1">Accommodatie</div>
             <p className="text-[13px] text-muted leading-snug">
-              <span className="font-semibold text-navy">{w.accommodation.name}</span> ({w.accommodation.type}) —{" "}
+              <span className="font-semibold text-navy">{w.accommodation.name}</span> ({nl(w.accommodation.type)}) —{" "}
               {w.accommodation.notes}
             </p>
           </section>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <MiniStat
-            label="BOB lead time"
-            value={
-              readiness.bobLeadTimeHours === null
-                ? "—"
-                : `${Math.round(readiness.bobLeadTimeHours)}u`
-            }
-            note={readiness.bobLeadTimeLabel}
-          />
-          <MiniStat
-            label="Bob risk index @ departure"
-            value={`${bob.score}`}
-            note={bob.level}
-            tone={toneForStatus(bob.level)}
-            title={bob.tooltip}
-          />
-          <MiniStat label="Group split risk" value={split.level} note={split.reason} tone={toneForStatus(split.level)} />
-          <MiniStat
-            label="Readiness @ departure"
-            value={`${readiness.percent}%`}
-            note={`${readiness.failCount} FAIL · ${readiness.unknownCount} UNKNOWN`}
-          />
-        </div>
-
         {scores && scores.ops.deductions.length > 0 && (
           <section>
-            <div className="erp-label mb-1.5">Operationele aftrekposten</div>
-            <div className="overflow-x-auto">
+            <div className="erp-label mb-1.5">Aftrekposten · 100 − {100 - scores.ops.score} = {scores.ops.score}</div>
+            <StackedBar segments={deductionSegments} height={18} formatValue={(v) => `${v} pt`} />
+            <div className="overflow-x-auto mt-2.5">
               <table className="erp">
                 <thead>
                   <tr>
-                    <th>Deduction</th>
+                    <th>Aftrekpost</th>
                     <th className="text-right">Punten</th>
                   </tr>
                 </thead>
@@ -188,98 +207,79 @@ function CaseCard({ weekend: w }: { weekend: Weekend }) {
                       <td className="text-right erp-mono text-nogo font-semibold">−{d.points}</td>
                     </tr>
                   ))}
-                  <tr>
-                    <td className="font-semibold text-navy">Totaal</td>
-                    <td className="text-right erp-mono font-semibold">
-                      100 − {scores.ops.deductions.reduce((s, d) => s + d.points, 0)} = {scores.ops.score}
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
           </section>
         )}
 
-        {scores && (
-          <section>
-            <div className="erp-label mb-1.5">Outcome-onderdelen</div>
-            <div className="flex flex-wrap gap-2">
-              {scores.out.parts.map((p) => (
-                <span key={p.label} className="rounded-[4px] border border-line bg-sunken px-2 py-1 text-[12px]">
-                  {p.label} <span className="erp-mono font-semibold">{p.value}</span>
-                  <span className="text-faint">/10</span>
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
         <section>
-          <div className="erp-label mb-1.5">Transportcapaciteit</div>
-          <div className="overflow-x-auto">
-            <table className="erp">
-              <thead>
-                <tr>
-                  <th>Voertuig</th>
-                  <th className="text-right">Stoelen</th>
-                  <th>Cargo</th>
-                  <th>Bagage</th>
-                  <th className="text-right">Effectief</th>
-                </tr>
-              </thead>
-              <tbody>
-                {w.vehicles.map((v) => {
-                  const eff = effectivePassengerCapacity(v);
-                  const seats = Math.min(v.availableSeats, v.nominalSeats);
-                  return (
-                    <tr key={v.id}>
-                      <td className="font-semibold text-navy whitespace-nowrap">{v.name}</td>
-                      <td className="text-right erp-mono">{seats}</td>
-                      <td>{CARGO_LABEL[v.cargoSize] ?? v.cargoSize}</td>
-                      <td>{LOAD_LABEL[v.luggageLoad] ?? v.luggageLoad}</td>
-                      <td className="text-right erp-mono font-semibold">
-                        {eff < seats ? <span className="text-nogo">{eff}</span> : eff}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {w.vehicles.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="text-muted">Geen voertuigen vastgelegd.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <div className="erp-label mb-1.5">Vervoerscapaciteit</div>
+          {w.vehicles.length === 0 ? (
+            <p className="text-[13px] text-muted">Geen voertuigen vastgelegd.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+              {w.vehicles.map((v) => {
+                const eff = effectivePassengerCapacity(v);
+                const lost = Math.max(0, v.nominalSeats - eff);
+                const filled = v.passengerIds.filter((id) => id !== v.driverId).length;
+                return (
+                  <div key={v.id} className="rounded-[6px] border border-line bg-sunken px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-navy text-[13px] truncate">{v.name}</span>
+                      <span className="erp-mono text-[11px] text-faint ml-auto whitespace-nowrap">
+                        {filled}/{eff}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <SeatGrid seats={v.nominalSeats} filled={filled} lost={lost} />
+                    </div>
+                    <div className="text-[11px] text-muted mt-1.5">
+                      Bagage {nl(v.cargoSize)} · lading {nl(v.luggageLoad)}
+                      {lost > 0 && <span className="text-nogo font-semibold"> · −{lost} stoel(en)</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <p className="text-[11.5px] text-faint mt-1.5">
-            Effectieve capaciteit = min(beschikbare, nominale) stoelen − bagagepenalty. Kampeerspullen in een kleine
-            auto kosten twee stoelen.
+            Blauw = ingedeeld, gearceerd = door bagage verloren, leeg = vrij. Kampeerspullen in een kleine auto kosten
+            twee stoelen.
           </p>
         </section>
 
         {w.decisions.length > 0 && (
           <section>
-            <div className="erp-label mb-1.5">
-              Decision log · {lastMinute.length} van {w.decisions.length} binnen 24u voor vertrek
+            <div className="erp-label mb-2">
+              Besluitenlog · {lastMinute.length} van {w.decisions.length} binnen 24u voor vertrek
             </div>
-            <div className="divide-y divide-line border border-line rounded-[6px]">
+            <ol className="relative border-l-2 border-line ml-2 space-y-3">
               {[...w.decisions]
                 .sort((a, b) => a.at.localeCompare(b.at))
-                .map((d) => (
-                  <div key={d.id} className="px-3 py-2 flex flex-wrap items-start gap-2">
-                    <span className="erp-mono text-[11.5px] text-faint w-[132px] shrink-0">{formatDateTime(d.at)}</span>
-                    <Badge tone="neutral">{d.topic}</Badge>
-                    {hoursBetween(d.at, w.departureAt) < 24 && <Badge tone="nogo">LAST-MINUTE</Badge>}
-                    <span className="text-[13px] flex-1 min-w-[200px]">{d.summary}</span>
-                  </div>
-                ))}
-            </div>
+                .map((d) => {
+                  const late = hoursBetween(d.at, w.departureAt) < 24;
+                  return (
+                    <li key={d.id} className="pl-4 relative">
+                      <span
+                        className={`absolute -left-[7px] top-1.5 w-3 h-3 rounded-full border-2 border-elev ${late ? "bg-nogo" : "bg-cobalt"}`}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="erp-mono text-[11.5px] text-faint">{formatDateTime(d.at)}</span>
+                        <Badge tone="neutral">{nl(d.topic)}</Badge>
+                        {late && <Badge tone="nogo">LAST-MINUTE</Badge>}
+                      </div>
+                      <p className="text-[13px] mt-0.5 leading-snug">{d.summary}</p>
+                    </li>
+                  );
+                })}
+            </ol>
           </section>
         )}
 
         {w.retrospective.lessonsLearned.length > 0 && (
           <section>
-            <div className="erp-label mb-1.5">Lessons learned</div>
+            <div className="erp-label mb-1.5">Geleerde lessen</div>
             <ol className="space-y-1.5 text-[13px] text-fg">
               {w.retrospective.lessonsLearned.map((l, i) => (
                 <li key={i} className="flex gap-2">
@@ -293,7 +293,7 @@ function CaseCard({ weekend: w }: { weekend: Weekend }) {
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Link href={`/weekends/${w.slug}`} className="btn btn-sm">Open weekenddossier</Link>
-          <Link href={`/weekends/${w.slug}/retrospective`} className="btn btn-sm">Retrospective</Link>
+          <Link href={`/weekends/${w.slug}/retrospective`} className="btn btn-sm">Terugblik</Link>
           <Link href="/glossary" className="btn btn-sm">Begrippen</Link>
         </div>
       </div>

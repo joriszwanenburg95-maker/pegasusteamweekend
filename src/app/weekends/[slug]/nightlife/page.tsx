@@ -16,9 +16,11 @@ import {
   formatDuration,
   groupSplitRisk,
   nightlifeViability,
+  parseClock,
   type EveningContext,
   type NightlifeViability,
 } from "@/lib/engine";
+import { nl } from "@/lib/labels";
 import {
   Badge,
   Callout,
@@ -31,28 +33,32 @@ import {
   TextInput,
   toneForStatus,
 } from "@/components/ui";
+import { CountUp, Gauge, StackedBar, TimeWindowBar, toneColor, type TimeSpan } from "@/components/viz";
 
-const TYPE_OPTIONS: { value: NightlifeType; label: string }[] = [
-  { value: "pub", label: "PUB" },
-  { value: "bar", label: "BAR" },
-  { value: "club", label: "CLUB" },
-  { value: "restaurantBar", label: "RESTAURANT + BAR" },
-  { value: "event", label: "EVENT" },
-  { value: "other", label: "OVERIG" },
-];
+const TYPE_OPTIONS: { value: NightlifeType; label: string }[] = (
+  ["pub", "bar", "club", "restaurantBar", "event", "other"] as NightlifeType[]
+).map((v) => ({ value: v, label: nl(v) }));
 
-const RETURN_OPTIONS: { value: LocalEvent["returnTransport"]; label: string }[] = [
-  { value: "walk", label: "LOPEN" },
-  { value: "car", label: "AUTO" },
-  { value: "taxi", label: "TAXI" },
-  { value: "unknown", label: "ONBEKEND" },
-];
+const RETURN_OPTIONS: { value: LocalEvent["returnTransport"]; label: string }[] = (
+  ["walk", "car", "taxi", "unknown"] as LocalEvent["returnTransport"][]
+).map((v) => ({ value: v, label: nl(v) }));
 
-const FALLBACK_OPTIONS: { value: LocalEvent["isFallbackFor"]; label: string }[] = [
-  { value: "nightlife", label: "AVONDPROGRAMMA" },
-  { value: "dinner", label: "DINER" },
-  { value: "both", label: "BEIDE" },
-];
+function fallbackLabel(v: LocalEvent["isFallbackFor"]): string {
+  return v === "both" ? `${nl("nightlife")} + ${nl("dinner")}` : nl(v);
+}
+
+const FALLBACK_OPTIONS: { value: LocalEvent["isFallbackFor"]; label: string }[] = (
+  ["nightlife", "dinner", "both"] as LocalEvent["isFallbackFor"][]
+).map((v) => ({ value: v, label: fallbackLabel(v) }));
+
+const SPLIT_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+
+/** Klokwaarden vóór 12:00 horen bij de nacht ná de avond: schuif ze een dag door. */
+function eveningMinutes(clock: string): number | null {
+  const m = parseClock(clock);
+  if (m === null) return null;
+  return m < 12 * 60 ? m + 1440 : m;
+}
 
 function blankDestination(isPrimary: boolean): NightlifeDestination {
   return {
@@ -83,7 +89,7 @@ function blankDestination(isPrimary: boolean): NightlifeDestination {
 function blankEvent(): LocalEvent {
   return {
     id: newId("e"),
-    name: "Nieuw lokaal event",
+    name: "Nieuw lokaal evenement",
     kind: "",
     address: "",
     distanceKm: 1,
@@ -154,38 +160,39 @@ export default function NightlifePage() {
     }));
 
   const removeEvent = (e: LocalEvent) => {
-    if (!window.confirm(`Event “${e.name}” verwijderen?`)) return;
+    if (!window.confirm(`Evenement “${e.name}” verwijderen?`)) return;
     patch((w) => ({ ...w, localEvents: w.localEvents.filter((x) => x.id !== e.id) }));
   };
 
   return (
     <div className="space-y-5">
-      {/* TOP STRIP ------------------------------------------------------ */}
+      {/* BOVENSTE STROOK ------------------------------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <Card eyebrow="Evening context" title="Startpunt avondprogramma">
-          <div className="erp-mono text-3xl font-semibold leading-none text-navy">
-            {ctx.arrivalClock}
+        <Card eyebrow="Avondcontext" title="Start avondprogramma" className="rise rise-1">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="erp-mono text-3xl font-semibold leading-none text-navy">
+                {ctx.arrivalClock}
+              </div>
+              <div className="erp-label mt-1.5">Aankomst avondlocatie</div>
+            </div>
+            <div className="text-right">
+              <div className="erp-mono text-3xl font-semibold leading-none text-navy">
+                <CountUp value={ctx.groupSize} />
+              </div>
+              <div className="erp-label mt-1.5">Groepsgrootte</div>
+            </div>
           </div>
-          <div className="text-[12px] text-muted mt-1.5 leading-snug">
-            Verwachte aankomst op de avondlocatie
+          <div className="mt-2 pt-2 border-t border-line text-[12px] text-muted leading-snug">
             {weekend.dinner.known
-              ? ` (na diner ${weekend.dinner.time || "?"} + ${weekend.dinner.durationMin} min).`
-              : " (aanname: diner onbekend)."}
-          </div>
-          <div className="mt-2 pt-2 border-t border-line flex items-center justify-between">
-            <span className="erp-label">Group size</span>
-            <span className="erp-mono text-lg font-semibold text-navy">{ctx.groupSize}</span>
+              ? `Na eten om ${weekend.dinner.time || "?"} plus ${weekend.dinner.durationMin} min.`
+              : "Aanname: eten nog onbekend."}
           </div>
         </Card>
 
-        <Card navy eyebrow="Group split risk" title="Blijft het team bij elkaar?">
-          <Badge
-            tone={toneForStatus(split.level)}
-            className="text-[13px] px-2.5 py-1"
-          >
-            {split.level}
-          </Badge>
-          <p className="text-[13px] leading-snug text-white/85 mt-2">{split.reason}</p>
+        <Card navy eyebrow="Groepssplitsingsrisico" title="Blijft het team bij elkaar?" className="rise rise-2">
+          <SplitMeter level={split.level} />
+          <p className="text-[13px] leading-snug text-white/85 mt-2.5">{split.reason}</p>
           <ul className="mt-2 pt-2 border-t border-white/10 space-y-1">
             {split.factors.map((f) => (
               <li key={f} className="text-[12px] text-white/65 leading-snug flex gap-2">
@@ -199,25 +206,26 @@ export default function NightlifePage() {
           </div>
         </Card>
 
-        <Card eyebrow="BZT estimate" title="Bier Zuip Tijd">
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <div className="erp-label">Bruto</div>
-              <div className="erp-mono text-lg font-semibold">{formatDuration(bzt.grossMin)}</div>
-            </div>
-            <div>
-              <div className="erp-label">Aftrek</div>
-              <div
-                className={`erp-mono text-lg font-semibold ${bzt.splitPenaltyMin > 0 ? "text-nogo" : ""}`}
-              >
-                {bzt.splitPenaltyMin > 0 ? "−" : ""}
-                {formatDuration(bzt.splitPenaltyMin)}
-              </div>
-            </div>
-            <div>
-              <div className="erp-label">Netto</div>
-              <div className={`erp-mono text-lg font-semibold ${bzt.netMin > 0 ? "text-go" : "text-nogo"}`}>
-                {formatDuration(bzt.netMin)}
+        <Card eyebrow="BZT-raming" title="Bier Zuip Tijd" className="rise rise-3">
+          <div className="flex items-center gap-3">
+            <Gauge
+              value={bzt.netMin}
+              max={Math.max(bzt.grossMin, 1)}
+              size={86}
+              stroke={9}
+              tone={bzt.netMin > 0 ? "go" : "nogo"}
+              label="netto min"
+            />
+            <div className="min-w-0 flex-1">
+              <StackedBar
+                segments={[
+                  { label: "Netto", value: bzt.netMin, tone: "go" },
+                  { label: "Aftrek", value: bzt.splitPenaltyMin, tone: "nogo" },
+                ]}
+                formatValue={(v) => formatDuration(v)}
+              />
+              <div className="erp-mono text-[12px] text-muted mt-2">
+                Bruto {formatDuration(bzt.grossMin)}
               </div>
             </div>
           </div>
@@ -227,13 +235,12 @@ export default function NightlifePage() {
         </Card>
       </div>
 
-      {/* CALLOUT + COMPARISON ------------------------------------------- */}
-      <Callout tone="warn" title="Nightlife viability">
-        “Kroeg gevonden” is onvoldoende. Een kroeg op 5 minuten afstand die om 22:00 sluit is
-        niet automatisch goed.
+      {/* CALLOUT + VERGELIJKING ------------------------------------------ */}
+      <Callout tone="warn" title="Haalbaarheid avondlocatie">
+        Een kroeg op vijf minuten lopen die om 22:00 sluit is niet automatisch goed.
       </Callout>
 
-      <Card eyebrow="Comparison" title="Alle bestemmingen naast elkaar" padded={false}>
+      <Card eyebrow="Vergelijking" title="Alle bestemmingen naast elkaar" padded={false} className="rise rise-4">
         {weekend.nightlife.length === 0 ? (
           <div className="px-4 py-6 text-sm text-muted">Nog geen bestemmingen ingevoerd.</div>
         ) : (
@@ -244,20 +251,20 @@ export default function NightlifePage() {
                   <th>Bestemming</th>
                   <th>Heen/terug</th>
                   <th>Sluit</th>
-                  <th>BZT-window</th>
-                  <th>Groep ok</th>
+                  <th>BZT-venster</th>
+                  <th>Groep</th>
                   <th>Reservering</th>
-                  <th className="text-right">Viability</th>
-                  <th>Split-risk flags</th>
+                  <th className="text-right">Score</th>
+                  <th>Signalen</th>
                 </tr>
               </thead>
               <tbody>
                 {weekend.nightlife.map((n) => {
                   const v = nightlifeViability(n, ctx);
                   const flags = [
-                    n.transportRequired ? "TRANSPORT" : null,
-                    n.taxiRequired ? (n.taxiArranged ? "TAXI OK" : "TAXI NIET GEREGELD") : null,
-                    n.transfers >= 3 ? `${n.transfers} TRANSFERS` : null,
+                    n.transportRequired ? "VERVOER NODIG" : null,
+                    n.taxiRequired ? (n.taxiArranged ? "TAXI GEREGELD" : "TAXI NIET GEREGELD") : null,
+                    n.transfers >= 3 ? `${n.transfers} VERPLAATSINGEN` : null,
                     !n.suitableLargeGroup && n.groupCapacity < ctx.groupSize
                       ? "GROEP PAST NIET"
                       : null,
@@ -268,7 +275,7 @@ export default function NightlifePage() {
                         {n.name}
                         {n.isPrimary && (
                           <Badge tone="navy" className="ml-2">
-                            Primary
+                            Primair
                           </Badge>
                         )}
                       </td>
@@ -285,7 +292,7 @@ export default function NightlifePage() {
                             n.suitableLargeGroup && n.groupCapacity >= ctx.groupSize ? "go" : "warn"
                           }
                         >
-                          {n.suitableLargeGroup && n.groupCapacity >= ctx.groupSize ? "JA" : "KRAP"}
+                          {n.suitableLargeGroup && n.groupCapacity >= ctx.groupSize ? "PAST" : "KRAP"}
                         </Badge>
                       </td>
                       <td>
@@ -297,10 +304,10 @@ export default function NightlifePage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="text-right">
+                      <td className="text-right whitespace-nowrap">
                         <span className="erp-mono font-semibold">{v.score}</span>
                         <span className="text-faint">/100</span>{" "}
-                        <Badge tone={toneForStatus(v.grade)}>{v.grade}</Badge>
+                        <Badge tone={toneForStatus(v.grade)}>{nl(v.grade)}</Badge>
                       </td>
                       <td className="text-[11.5px] text-muted">
                         {flags.length === 0 ? "—" : flags.join(" · ")}
@@ -314,11 +321,11 @@ export default function NightlifePage() {
         )}
       </Card>
 
-      {/* DESTINATIONS ---------------------------------------------------- */}
+      {/* BESTEMMINGEN ----------------------------------------------------- */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="erp-label">Destinations</div>
-          <h2 className="text-sm font-bold text-navy">Avondbestemmingen · viability assessment</h2>
+          <div className="erp-label">Bestemmingen</div>
+          <h2 className="text-sm font-bold text-navy">Avondbestemmingen · haalbaarheid</h2>
         </div>
         <button className="btn btn-primary btn-sm" onClick={addDest}>
           <Plus size={13} /> Nieuwe bestemming
@@ -327,17 +334,18 @@ export default function NightlifePage() {
 
       {weekend.nightlife.length === 0 ? (
         <EmptyState title="Geen avondbestemming vastgelegd">
-          Zonder bestemming is Group Split Risk per definitie CRITICAL: niemand weet waar de groep
-          heen gaat, laat staan hoe men terugkomt.
+          Zonder bestemming is het groepssplitsingsrisico per definitie {nl("CRITICAL")}: niemand
+          weet waar de groep heen gaat, laat staan hoe men terugkomt.
         </EmptyState>
       ) : (
         <div className="space-y-3">
-          {weekend.nightlife.map((n) => (
+          {weekend.nightlife.map((n, i) => (
             <DestinationCard
               key={n.id}
               dest={n}
               ctx={ctx}
               viability={nightlifeViability(n, ctx)}
+              riseIndex={i}
               onChange={(changes) => updateDest(n.id, changes)}
               onPrimary={() => makePrimary(n)}
               onRemove={() => removeDest(n)}
@@ -346,37 +354,37 @@ export default function NightlifePage() {
         </div>
       )}
 
-      {/* LOCAL EVENTS ---------------------------------------------------- */}
+      {/* LOKALE EVENEMENTEN ----------------------------------------------- */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line">
         <div>
-          <div className="erp-label">Local event fallback</div>
-          <h2 className="text-sm font-bold text-navy">Lokale events als praktisch alternatief</h2>
+          <div className="erp-label">Terugvaloptie</div>
+          <h2 className="text-sm font-bold text-navy">Lokale evenementen als alternatief</h2>
         </div>
         <button
           className="btn btn-sm"
           onClick={() => patch((w) => ({ ...w, localEvents: [...w.localEvents, blankEvent()] }))}
         >
-          <Plus size={13} /> Nieuw event
+          <Plus size={13} /> Nieuw evenement
         </button>
       </div>
 
       <Callout tone="neutral">
-        Geen toeristische aanbevelingen: een event is alleen relevant als praktisch alternatief voor
-        het avondprogramma; beoordeeld met dezelfde maatstaf als horeca.
+        Alleen relevant als praktisch alternatief voor de avond of het eten, beoordeeld met dezelfde
+        maatstaf als horeca.
       </Callout>
 
       {weekend.localEvents.length === 0 ? (
         <div className="card px-4 py-5 text-sm text-muted">
-          Geen lokale events geregistreerd. Voeg er alleen een toe als het een reëel alternatief is
-          voor de avond of het diner.
+          Geen lokale evenementen geregistreerd.
         </div>
       ) : (
         <div className="space-y-3">
-          {weekend.localEvents.map((e) => (
+          {weekend.localEvents.map((e, i) => (
             <EventCard
               key={e.id}
               event={e}
               viability={eventViability(e, ctx)}
+              riseIndex={i}
               onChange={(changes) => updateEvent(e.id, changes)}
               onRemove={() => removeEvent(e)}
             />
@@ -389,34 +397,104 @@ export default function NightlifePage() {
 
 /* ------------------------------------------------------------------ */
 
-function FactorTable({ viability }: { viability: NightlifeViability }) {
+/** Vier-staps meter voor het groepssplitsingsrisico (op navy achtergrond). */
+function SplitMeter({ level }: { level: (typeof SPLIT_LEVELS)[number] }) {
+  const idx = SPLIT_LEVELS.indexOf(level);
+  const color = toneColor(toneForStatus(level));
   return (
-    <div className="overflow-x-auto">
-      <table className="erp">
-        <thead>
-          <tr>
-            <th>Factor</th>
-            <th className="text-right">Punten</th>
-            <th>Toelichting</th>
-          </tr>
-        </thead>
-        <tbody>
-          {viability.factors.map((f, i) => (
-            <tr key={`${f.label}-${i}`}>
-              <td className="whitespace-nowrap font-semibold text-navy">{f.label}</td>
-              <td
-                className={`text-right erp-mono font-semibold ${
-                  f.points > 0 ? "text-go" : f.points < 0 ? "text-nogo" : "text-faint"
-                }`}
-              >
-                {f.points > 0 ? `+${f.points}` : f.points}
-              </td>
-              <td className="text-[12px] text-muted">{f.detail}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex gap-1.5" role="img" aria-label={`Groepssplitsingsrisico ${nl(level)}`}>
+      {SPLIT_LEVELS.map((l, i) => (
+        <div key={l} className="flex-1 min-w-0">
+          <div
+            className="h-2.5 rounded-full viz-grow-x"
+            style={{
+              background: i <= idx ? color : "rgba(255,255,255,0.14)",
+              animationDelay: `${i * 70}ms`,
+            }}
+          />
+          <div
+            className={`mt-1 text-[8.5px] font-bold tracking-[0.08em] uppercase truncate ${
+              i === idx ? "text-white" : "text-white/40"
+            }`}
+          >
+            {nl(l)}
+          </div>
+        </div>
+      ))}
     </div>
+  );
+}
+
+/** Plus/min-staafjes per scorefactor, in plaats van een tabel met cijfers. */
+function FactorBars({ viability }: { viability: NightlifeViability }) {
+  const max = Math.max(10, ...viability.factors.map((f) => Math.abs(f.points)));
+  return (
+    <ul className="px-4 py-3 space-y-1.5">
+      {viability.factors.map((f, i) => {
+        const pos = f.points >= 0;
+        const width = `${(Math.abs(f.points) / max) * 50}%`;
+        return (
+          <li
+            key={`${f.label}-${i}`}
+            className="grid grid-cols-[84px_1fr_34px] sm:grid-cols-[96px_120px_34px_1fr] items-center gap-2"
+          >
+            <span className="erp-label truncate" title={f.label}>
+              {f.label}
+            </span>
+            <div className="relative h-3 rounded-sm bg-sunken overflow-hidden" title={f.detail}>
+              <span className="absolute inset-y-0 left-1/2 w-px bg-line-strong" />
+              <span
+                className="absolute inset-y-0 viz-grow-x rounded-sm"
+                style={{
+                  width,
+                  background: toneColor(pos ? (f.points === 0 ? "unknown" : "go") : "nogo"),
+                  left: pos ? "50%" : undefined,
+                  right: pos ? undefined : "50%",
+                  transformOrigin: pos ? "left center" : "right center",
+                  animationDelay: `${i * 50}ms`,
+                }}
+              />
+            </div>
+            <span
+              className={`erp-mono text-[11.5px] font-semibold text-right ${
+                f.points > 0 ? "text-go" : f.points < 0 ? "text-nogo" : "text-faint"
+              }`}
+            >
+              {f.points > 0 ? `+${f.points}` : f.points}
+            </span>
+            <span className="hidden sm:block text-[11.5px] text-muted truncate" title={f.detail}>
+              {f.detail}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Avondbalk: BZT-venster van aankomst tot sluiting, plus eventueel de keuken. */
+function EveningBar({ dest, arrivalClock }: { dest: NightlifeDestination; arrivalClock: string }) {
+  const arrive = eveningMinutes(arrivalClock);
+  const close = eveningMinutes(dest.closesAt);
+  const opens = eveningMinutes(dest.opensAt);
+  const kitchen = dest.kitchenClosesAt ? eveningMinutes(dest.kitchenClosesAt) : null;
+
+  const spans: TimeSpan[] = [];
+  if (kitchen !== null) {
+    const from = Math.min(opens ?? kitchen, kitchen);
+    if (kitchen > from) spans.push({ label: "Keuken", fromMin: from, toMin: kitchen, tone: "warn" });
+  }
+  if (arrive !== null && close !== null && close > arrive) {
+    spans.push({ label: "BZT-venster", fromMin: arrive, toMin: close, tone: "go" });
+  }
+
+  const endMin = Math.max(28 * 60, (close ?? 0) + 30);
+  return (
+    <TimeWindowBar
+      spans={spans}
+      endMin={endMin}
+      markers={arrive === null ? [] : [{ atMin: arrive, label: "aankomst", tone: "navy" }]}
+    />
   );
 }
 
@@ -424,6 +502,7 @@ function DestinationCard({
   dest,
   ctx,
   viability,
+  riseIndex,
   onChange,
   onPrimary,
   onRemove,
@@ -431,38 +510,43 @@ function DestinationCard({
   dest: NightlifeDestination;
   ctx: EveningContext;
   viability: NightlifeViability;
+  riseIndex: number;
   onChange: (changes: Partial<NightlifeDestination>) => void;
   onPrimary: () => void;
   onRemove: () => void;
 }) {
   return (
-    <section className="card">
+    <section className={`card rise rise-${Math.min(6, riseIndex + 1)}`}>
       <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-3 pb-3 border-b border-line">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-bold text-navy">{dest.name || "Naamloos"}</h3>
-            <Badge tone="neutral">
-              {TYPE_OPTIONS.find((t) => t.value === dest.type)?.label ?? dest.type}
-            </Badge>
-            {dest.isPrimary && <Badge tone="navy">Primary</Badge>}
+            <Badge tone="neutral">{nl(dest.type)}</Badge>
+            {dest.isPrimary && <Badge tone="navy">Primair</Badge>}
+          </div>
+          <div className="erp-label mt-1">
+            BZT-venster {formatDuration(viability.bztWindowMin)} · groep {ctx.groupSize}
           </div>
           <p className="text-[12.5px] text-muted mt-1 leading-snug max-w-2xl">{viability.verdict}</p>
-          <div className="erp-label mt-1">
-            BZT-window {formatDuration(viability.bztWindowMin)} · groep {ctx.groupSize}
+          <div className="mt-2">
+            <EveningBar dest={dest} arrivalClock={ctx.arrivalClock} />
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <div className="erp-mono text-3xl font-semibold leading-none text-navy">
-            {viability.score}
-            <span className="text-base text-faint">/100</span>
-          </div>
+        <div className="shrink-0 text-center">
+          <Gauge
+            value={viability.score}
+            size={96}
+            stroke={9}
+            tone={toneForStatus(viability.grade)}
+            label="van 100"
+          />
           <div className="mt-1">
-            <Badge tone={toneForStatus(viability.grade)}>{viability.grade}</Badge>
+            <Badge tone={toneForStatus(viability.grade)}>{nl(viability.grade)}</Badge>
           </div>
         </div>
       </header>
 
-      <FactorTable viability={viability} />
+      <FactorBars viability={viability} />
 
       <div className="px-4 py-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Field label="Naam" className="sm:col-span-2">
@@ -485,10 +569,10 @@ function DestinationCard({
         <Field label="Looptijd (min)">
           <NumberInput value={dest.walkMin} onChange={(v) => onChange({ walkMin: v })} />
         </Field>
-        <Field label="Opent" hint="HH:MM">
+        <Field label="Opent" hint="UU:MM">
           <TextInput value={dest.opensAt} onChange={(v) => onChange({ opensAt: v })} placeholder="17:00" />
         </Field>
-        <Field label="Sluit" hint="HH:MM, na middernacht toegestaan">
+        <Field label="Sluit" hint="UU:MM, na middernacht toegestaan">
           <TextInput value={dest.closesAt} onChange={(v) => onChange({ closesAt: v })} placeholder="02:00" />
         </Field>
 
@@ -510,7 +594,7 @@ function DestinationCard({
           />
         </Field>
 
-        <Field label="Transfers" hint="Verplaatsingen heen én terug">
+        <Field label="Verplaatsingen" hint="Heen én terug">
           <NumberInput value={dest.transfers} onChange={(v) => onChange({ transfers: v })} />
         </Field>
         <Field label="Notities" className="sm:col-span-2 lg:col-span-3">
@@ -552,20 +636,16 @@ function DestinationCard({
         <Checkbox
           checked={dest.fallbackAvailable}
           onChange={(v) => onChange({ fallbackAvailable: v })}
-          label="Fallback aanwezig"
+          label="Alternatief aanwezig"
         />
       </div>
 
       <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-line pt-3">
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={onPrimary}
-          disabled={dest.isPrimary}
-        >
+        <button className="btn btn-primary btn-sm" onClick={onPrimary} disabled={dest.isPrimary}>
           Maak primair
         </button>
         <button className="btn btn-danger btn-sm" onClick={onRemove}>
-          <Trash2 size={13} /> Verwijder
+          <Trash2 size={13} /> Verwijderen
         </button>
       </div>
     </section>
@@ -577,41 +657,45 @@ function DestinationCard({
 function EventCard({
   event,
   viability,
+  riseIndex,
   onChange,
   onRemove,
 }: {
   event: LocalEvent;
   viability: NightlifeViability;
+  riseIndex: number;
   onChange: (changes: Partial<LocalEvent>) => void;
   onRemove: () => void;
 }) {
   return (
-    <section className="card">
+    <section className={`card rise rise-${Math.min(6, riseIndex + 1)}`}>
       <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-3 pb-3 border-b border-line">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-bold text-navy">{event.name || "Naamloos event"}</h3>
+            <h3 className="text-sm font-bold text-navy">{event.name || "Naamloos evenement"}</h3>
             {event.kind && <Badge tone="neutral">{event.kind}</Badge>}
-            <Badge tone="neutral">
-              Fallback:{" "}
-              {FALLBACK_OPTIONS.find((o) => o.value === event.isFallbackFor)?.label ??
-                event.isFallbackFor}
-            </Badge>
+            <Badge tone="neutral">Alternatief voor {fallbackLabel(event.isFallbackFor)}</Badge>
+          </div>
+          <div className="erp-label mt-1">
+            {event.opensAt || "?"} – {event.closesAt || "?"} · terug: {nl(event.returnTransport)}
           </div>
           <p className="text-[12.5px] text-muted mt-1 leading-snug max-w-2xl">{viability.verdict}</p>
         </div>
-        <div className="text-right shrink-0">
-          <div className="erp-mono text-2xl font-semibold leading-none text-navy">
-            {viability.score}
-            <span className="text-sm text-faint">/100</span>
-          </div>
+        <div className="shrink-0 text-center">
+          <Gauge
+            value={viability.score}
+            size={82}
+            stroke={8}
+            tone={toneForStatus(viability.grade)}
+            label="van 100"
+          />
           <div className="mt-1">
-            <Badge tone={toneForStatus(viability.grade)}>{viability.grade}</Badge>
+            <Badge tone={toneForStatus(viability.grade)}>{nl(viability.grade)}</Badge>
           </div>
         </div>
       </header>
 
-      <FactorTable viability={viability} />
+      <FactorBars viability={viability} />
 
       <div className="px-4 py-3 border-t border-line grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Field label="Naam" className="sm:col-span-2">
@@ -633,10 +717,10 @@ function EventCard({
         <Field label="Looptijd (min)">
           <NumberInput value={event.walkMin} onChange={(v) => onChange({ walkMin: v })} />
         </Field>
-        <Field label="Opent" hint="HH:MM">
+        <Field label="Opent" hint="UU:MM">
           <TextInput value={event.opensAt} onChange={(v) => onChange({ opensAt: v })} />
         </Field>
-        <Field label="Sluit" hint="HH:MM">
+        <Field label="Sluit" hint="UU:MM">
           <TextInput value={event.closesAt} onChange={(v) => onChange({ closesAt: v })} />
         </Field>
         <Field label="Terugreis">
@@ -646,7 +730,7 @@ function EventCard({
             options={RETURN_OPTIONS}
           />
         </Field>
-        <Field label="Fallback voor">
+        <Field label="Alternatief voor">
           <Select
             value={event.isFallbackFor}
             onChange={(v) => onChange({ isFallbackFor: v })}
@@ -678,7 +762,7 @@ function EventCard({
 
       <div className="px-4 pb-3 pt-3 border-t border-line">
         <button className="btn btn-danger btn-sm" onClick={onRemove}>
-          <Trash2 size={13} /> Verwijder event
+          <Trash2 size={13} /> Evenement verwijderen
         </button>
       </div>
     </section>
