@@ -18,15 +18,15 @@ export function operationalQuality(input: OperationalInput, w?: Weekend): Operat
   const add = (label: string, points: number) => {
     if (points > 0) d.push({ label, points: Math.round(points) });
   };
-  add("Last-minute decisions", clamp(input.lastMinuteDecisions * 5, 0, 25));
-  add("Unresolved items at departure", clamp(input.unresolvedAtDeparture * 6, 0, 30));
-  add("Unnecessary travel time", clamp(input.unnecessaryTravelMin / 6, 0, 15));
-  add("Waiting", clamp(input.waitingMin / 6, 0, 10));
-  add("Group splits", clamp(input.groupSplits * 6, 0, 18));
-  add("Reservation problems", clamp(input.reservationIssues * 6, 0, 12));
-  add("Transport problems", clamp(input.transportIssues * 6, 0, 12));
-  add("BZT loss", clamp(input.bztLossMin / 10, 0, 15));
-  add("Overrides", clamp(input.overrides * 4, 0, 12));
+  add("Last-minute decisions", clamp(input.lastMinuteDecisions * 4, 0, 20));
+  add("Unresolved items at departure", clamp(input.unresolvedAtDeparture * 5, 0, 25));
+  add("Unnecessary travel time", clamp(input.unnecessaryTravelMin / 10, 0, 10));
+  add("Waiting", clamp(input.waitingMin / 10, 0, 8));
+  add("Group splits", clamp(input.groupSplits * 4, 0, 12));
+  add("Reservation problems", clamp(input.reservationIssues * 5, 0, 10));
+  add("Transport problems", clamp(input.transportIssues * 4, 0, 8));
+  add("BZT loss", clamp(input.bztLossMin / 15, 0, 10));
+  add("Overrides", clamp(input.overrides * 3, 0, 9));
   if (w) {
     const split = groupSplitRisk(w);
     if (split.level === "HIGH") add("Planned Group Split Risk HIGH", 5);

@@ -240,7 +240,7 @@ export const MAASEIK: Weekend = {
       gezelligheid: 9,
       realizedBzt: 8,
       location: 8,
-      evening: 8,
+      evening: 9,
       accommodation: 8,
       activity: 9,
       overall: 9,
@@ -248,12 +248,12 @@ export const MAASEIK: Weekend = {
     operational: {
       lastMinuteDecisions: 4,
       unresolvedAtDeparture: 3,
-      unnecessaryTravelMin: 45,
+      unnecessaryTravelMin: 40,
       waitingMin: 40,
       groupSplits: 1,
       reservationIssues: 1,
       transportIssues: 1,
-      bztLossMin: 75,
+      bztLossMin: 60,
       overrides: 1,
     },
     lessonsLearned: [
@@ -290,8 +290,8 @@ export const OCTOBER_2026: Weekend = {
     opponent: "Uitwedstrijd (tegenstander volgt)",
     venue: "Nog te bepalen",
     city: "Nog te bepalen",
-    matchStart: "2026-10-03T17:00:00.000Z",
-    matchEnd: "2026-10-03T19:00:00.000Z",
+    matchStart: "2026-10-03T15:00:00.000Z",
+    matchEnd: "2026-10-03T17:00:00.000Z",
     isAway: true,
   },
   participants: participants({
@@ -558,7 +558,7 @@ export function blankWeekend(id: string, name: string, departureAt: string): Wee
   };
 }
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 export function seedState(): AppState {
   return {
