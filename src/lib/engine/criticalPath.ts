@@ -5,7 +5,7 @@ export interface PathAnalysis {
   steps: (PathStep & { startAt: string; endAt: string; cumulativeMin: number })[];
   totalMin: number;
   byCategory: Record<PathCategory, number>;
-  /** Minuten van MATCH END tot FIRST BEER (eerste stap met categorie 'bzt'). */
+  /** Minuten van EINDE WEDSTRIJD tot EERSTE BIER (eerste stap met categorie 'bzt'). */
   minutesToFirstBeer: number | null;
   firstBeerAt: string | null;
   transfers: number;
@@ -20,10 +20,10 @@ export interface Optimization {
 }
 
 export const CATEGORY_LABEL: Record<PathCategory, string> = {
-  valueAdding: "VALUE ADDING",
+  valueAdding: "WAARDE TOEVOEGEND",
   bzt: "BZT",
-  logistics: "NECESSARY LOGISTICS",
-  waste: "PURE WASTE",
+  logistics: "NOODZAKELIJKE LOGISTIEK",
+  waste: "PURE VERSPILLING",
 };
 
 export function analyzeCriticalPath(w: Weekend): PathAnalysis {
@@ -58,14 +58,14 @@ export function analyzeCriticalPath(w: Weekend): PathAnalysis {
         savesMin: s.durationMin,
         detail:
           s.optimizationHint ??
-          `Skipping “${s.label}” saves ${s.durationMin} minutes of team time.`,
+          `“${s.label}” overslaan bespaart ${s.durationMin} minuten teamtijd.`,
       });
     } else if (s.category === "waste" && s.durationMin > 0) {
       optimizations.push({
         stepId: s.id,
         label: s.label,
         savesMin: s.durationMin,
-        detail: s.optimizationHint ?? `“${s.label}” is pure waste: ${s.durationMin} minutes without value.`,
+        detail: s.optimizationHint ?? `“${s.label}” is pure verspilling: ${s.durationMin} minuten zonder waarde.`,
       });
     }
     cursor = endAt;

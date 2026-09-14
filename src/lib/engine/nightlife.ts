@@ -64,7 +64,7 @@ export function nightlifeViability(
   else if (bztWindowMin >= 60) wPts = 8;
   score += wPts;
   factors.push({
-    label: "BZT-window",
+    label: "BZT-venster",
     points: wPts,
     detail:
       bztWindowMin === 0

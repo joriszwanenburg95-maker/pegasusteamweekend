@@ -141,8 +141,8 @@ describe("bob risk index", () => {
   it("Maaseik is SEVERE with own shelter as primary driver", () => {
     const b = bobRiskIndex(MAASEIK, "2025-09-27T13:00:00.000Z");
     expect(b.score).toBeGreaterThanOrEqual(70);
-    expect(b.primaryDriver).toMatch(/own shelter/);
-    expect(b.tooltip).toBe("One Bob is enough.");
+    expect(b.primaryDriver).toMatch(/zelf een slaapplek/);
+    expect(b.tooltip).toBe("Eén Bob is genoeg.");
   });
   it("a fully arranged weekend is low risk", () => {
     const w = {
@@ -162,11 +162,11 @@ describe("operational quality vs weekend outcome", () => {
     const { ops, out, classification } = retrospectiveScores(MAASEIK.retrospective, MAASEIK);
     expect(out.score).toBeGreaterThanOrEqual(8);
     expect(ops.score).toBeLessThan(55);
-    expect(classification).toBe("Questionable process. Acceptable result.");
+    expect(classification).toBe("Twijfelachtig proces. Acceptabel resultaat.");
   });
   it("perfect ops scores 100", () => {
     expect(operationalQuality({ lastMinuteDecisions: 0, unresolvedAtDeparture: 0, unnecessaryTravelMin: 0, waitingMin: 0, groupSplits: 0, reservationIssues: 0, transportIssues: 0, bztLossMin: 0, overrides: 0 }).score).toBe(100);
     expect(weekendOutcome({ gezelligheid: 10, realizedBzt: 10, location: 10, evening: 10, accommodation: 10, activity: 10, overall: 10 }).score).toBe(10);
-    expect(classify(9, 90)).toBe("Solid process. Solid result.");
+    expect(classify(9, 90)).toBe("Degelijk proces. Degelijk resultaat.");
   });
 });

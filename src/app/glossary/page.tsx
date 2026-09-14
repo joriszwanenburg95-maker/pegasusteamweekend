@@ -101,13 +101,13 @@ export default function GlossaryPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
         <Card eyebrow="Kernbegrippen" title="Meeteenheden" padded={false}>
           <Defs>
-            <Term term="BZT" abbr="Beschikbare Zuip Tijd">
+            <Term term="BZT" abbr="Bier Zuip Tijd">
               <p>
                 De tijd waarin het team daadwerkelijk gezamenlijk kan zijn: van FIRST BEER tot het moment dat de
                 primaire avondlocatie sluit, gecorrigeerd voor Group Split Risk.
               </p>
               <p className="text-faint">
-                Werkdefinitie van deze applicatie. Netto BZT = bruto BZT − (bruto × splitsingsfactor). De factor is 0
+                Netto BZT = bruto BZT − (bruto × splitsingsfactor). De factor is 0
                 bij LOW, 0,10 bij MEDIUM, 0,25 bij HIGH en 0,45 bij CRITICAL.
               </p>
             </Term>

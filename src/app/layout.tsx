@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pegasus HS1 · Teamweekend Control Room",
+  title: "Pegasus HS1 · Teamweekend Controlekamer",
   description:
     "Readiness gate, BZT-optimizer en Bob Risk Index voor de teamweekenden van Pegasus Heren 1, Nijmegen. Hup blauw.",
   icons: { icon: "/pegasus-logo-256.png" },

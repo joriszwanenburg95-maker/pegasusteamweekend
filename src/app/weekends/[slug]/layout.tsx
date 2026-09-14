@@ -8,16 +8,16 @@ import { PhaseBadge, EmptyState, StatusBadge } from "@/components/ui";
 import { evaluateReadiness, bobRiskIndex, formatDateTime } from "@/lib/engine";
 
 const TABS: { seg: string; label: string }[] = [
-  { seg: "", label: "Overview" },
-  { seg: "readiness", label: "Readiness" },
-  { seg: "headcount", label: "Headcount" },
-  { seg: "logistics", label: "Stay & Food" },
-  { seg: "nightlife", label: "Nightlife" },
-  { seg: "transport", label: "Transport" },
-  { seg: "critical-path", label: "Critical Path" },
-  { seg: "runbook", label: "Runbook" },
-  { seg: "retrospective", label: "Retrospective" },
-  { seg: "settings", label: "Settings" },
+  { seg: "", label: "Overzicht" },
+  { seg: "readiness", label: "Gereedheid" },
+  { seg: "headcount", label: "Deelnemers" },
+  { seg: "logistics", label: "Slapen & eten" },
+  { seg: "nightlife", label: "Avond" },
+  { seg: "transport", label: "Vervoer" },
+  { seg: "critical-path", label: "Kritiek pad" },
+  { seg: "runbook", label: "Draaiboek" },
+  { seg: "retrospective", label: "Terugblik" },
+  { seg: "settings", label: "Instellingen" },
 ];
 
 export default function WeekendLayout({ children }: { children: ReactNode }) {
@@ -28,7 +28,7 @@ export default function WeekendLayout({ children }: { children: ReactNode }) {
   if (!weekend) {
     return (
       <EmptyState title="Weekend niet gevonden">
-        <Link href="/weekends" className="underline">Terug naar weekends</Link>
+        <Link href="/weekends" className="underline">Terug naar weekenden</Link>
       </EmptyState>
     );
   }
@@ -45,14 +45,14 @@ export default function WeekendLayout({ children }: { children: ReactNode }) {
             <div className="erp-label">Teamweekend · {weekend.season} · {weekend.city || "locatie n.t.b."}</div>
             <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">{weekend.name}</h1>
             <div className="text-[12px] text-white/65 mt-1 erp-mono">
-              Departure {formatDateTime(weekend.departureAt)} · Return {formatDateTime(weekend.returnAt)}
+              Vertrek {formatDateTime(weekend.departureAt)} · Terug {formatDateTime(weekend.returnAt)}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <PhaseBadge phase={weekend.phase} />
             <StatusBadge status={readiness.gate} />
-            <span className="erp-mono text-[12px] text-white/80" title="Readiness">
-              READINESS {readiness.percent}%
+            <span className="erp-mono text-[12px] text-white/80" title="Gereedheid">
+              GEREEDHEID {readiness.percent}%
             </span>
             <span className="erp-mono text-[12px] text-white/80" title={bob.tooltip}>
               BOB {bob.score}

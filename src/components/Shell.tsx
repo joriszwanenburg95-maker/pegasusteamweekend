@@ -4,16 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { CalendarRange, History, LayoutDashboard, Menu, X, BookOpen, Settings2 } from "lucide-react";
+import { CalendarRange, History, LayoutDashboard, Menu, X, BookOpen, Settings2, Compass } from "lucide-react";
 import { useStore } from "@/store/store";
 import { formatDateTime } from "@/lib/engine";
 
 const NAV = [
-  { href: "/", label: "Control Room", icon: LayoutDashboard },
-  { href: "/weekends", label: "Weekends", icon: CalendarRange },
-  { href: "/history", label: "Lessons Learned", icon: History },
-  { href: "/glossary", label: "Glossary", icon: BookOpen },
-  { href: "/settings", label: "System", icon: Settings2 },
+  { href: "/", label: "Controlekamer", icon: LayoutDashboard },
+  { href: "/intro", label: "Introductie", icon: Compass },
+  { href: "/weekends", label: "Weekenden", icon: CalendarRange },
+  { href: "/history", label: "Geleerde lessen", icon: History },
+  { href: "/glossary", label: "Begrippen", icon: BookOpen },
+  { href: "/settings", label: "Systeem", icon: Settings2 },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -68,12 +69,12 @@ export function Shell({ children }: { children: ReactNode }) {
             <Menu size={20} />
           </button>
           <Image src="/pegasus-logo-256.png" alt="Pegasus" width={28} height={28} />
-          <span className="font-bold text-sm tracking-wide">PEGASUS HS1 · CONTROL ROOM</span>
+          <span className="font-bold text-sm tracking-wide">PEGASUS HS1 · CONTROLEKAMER</span>
         </header>
         <main className="flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-6 max-w-[1400px] w-full mx-auto">{children}</main>
         <footer className="px-4 sm:px-6 lg:px-8 py-4 text-[11px] text-faint border-t border-line flex flex-wrap gap-x-4 gap-y-1">
           <span className="font-semibold text-muted">HUP BLAUW.</span>
-          <span>Operational Excellence Since 1998.</span>
+          <span>Operationele excellentie sinds 1998.</span>
           <span className="ml-auto">Pegasus HS1 · Superdivisie Heren · Ark van Oost, Nijmegen · Seizoen 2026/2027</span>
         </footer>
       </div>
@@ -87,7 +88,7 @@ function SidebarHeader() {
       <Image src="/pegasus-logo-256.png" alt="Pegasus Volleybal" width={44} height={44} className="rounded bg-white/95 p-0.5" priority />
       <div className="leading-tight">
         <div className="font-extrabold tracking-wide text-[13px]">PEGASUS HS1</div>
-        <div className="text-[10px] tracking-[0.18em] text-sky font-semibold">TEAMWEEKEND ERP</div>
+        <div className="text-[10px] tracking-[0.18em] text-sky font-semibold">TEAMWEEKEND-ERP</div>
       </div>
     </Link>
   );
@@ -102,7 +103,7 @@ function SidebarFooter({ clock, now, hydrated }: { clock: string | null; now: st
         {clock && <span className="text-warn font-semibold">SIM</span>}
       </div>
       <div>Superdivisie Heren · Nijmegen</div>
-      <div className="text-white/35">Hup blauw. Operational Excellence Since 1998.</div>
+      <div className="text-white/35">Hup blauw. Operationele excellentie sinds 1998.</div>
     </div>
   );
 }

@@ -5,9 +5,9 @@ import { primaryNightlife } from "./nightlife";
 import { clockSpanMinutes, isoToClock } from "./time";
 
 /**
- * BZT — Beschikbare Zuip Tijd (werkdefinitie in deze app):
+ * BZT — Bier Zuip Tijd:
  * de tijd waarin het team daadwerkelijk gezamenlijk kan zijn met een biertje,
- * van FIRST BEER tot het moment dat de primaire locatie sluit,
+ * van EERSTE BIER tot het moment dat de primaire locatie sluit,
  * gecorrigeerd voor Group Split Risk.
  */
 export interface BztEstimate {
@@ -35,10 +35,10 @@ export function estimateBzt(w: Weekend): BztEstimate {
       netMin: 0,
       firstBeerClock: firstBeer,
       closesAt: n?.closesAt ?? null,
-      detail: !n ? "Geen primaire avondlocatie." : "Geen FIRST BEER op het critical path.",
+      detail: !n ? "Geen primaire avondlocatie." : "Geen EERSTE BIER op het kritieke pad.",
     };
   }
-  // BZT telt vanaf FIRST BEER tot sluiting; een sluiting vóór first beer (span > 14u) telt als 0.
+  // BZT telt vanaf EERSTE BIER tot sluiting; een sluiting vóór het eerste bier (span > 14u) telt als 0.
   const span = clockSpanMinutes(firstBeer, n.closesAt) ?? 0;
   const grossMin = span > 14 * 60 ? 0 : Math.min(span, 9 * 60);
   const splitPenaltyMin = Math.round(grossMin * split.bztPenaltyFactor);
@@ -48,6 +48,6 @@ export function estimateBzt(w: Weekend): BztEstimate {
     netMin: grossMin - splitPenaltyMin,
     firstBeerClock: firstBeer,
     closesAt: n.closesAt,
-    detail: `First beer ${firstBeer}, ${n.name} sluit ${n.closesAt}. Group Split Risk ${split.level} kost ${splitPenaltyMin} min.`,
+    detail: `Eerste bier ${firstBeer}, ${n.name} sluit ${n.closesAt}. Groepssplitsingsrisico ${split.level} kost ${splitPenaltyMin} min.`,
   };
 }

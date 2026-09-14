@@ -18,19 +18,19 @@ export function operationalQuality(input: OperationalInput, w?: Weekend): Operat
   const add = (label: string, points: number) => {
     if (points > 0) d.push({ label, points: Math.round(points) });
   };
-  add("Last-minute decisions", clamp(input.lastMinuteDecisions * 4, 0, 20));
-  add("Unresolved items at departure", clamp(input.unresolvedAtDeparture * 5, 0, 25));
-  add("Unnecessary travel time", clamp(input.unnecessaryTravelMin / 10, 0, 10));
-  add("Waiting", clamp(input.waitingMin / 10, 0, 8));
-  add("Group splits", clamp(input.groupSplits * 4, 0, 12));
-  add("Reservation problems", clamp(input.reservationIssues * 5, 0, 10));
-  add("Transport problems", clamp(input.transportIssues * 4, 0, 8));
-  add("BZT loss", clamp(input.bztLossMin / 15, 0, 10));
+  add("Last-minute besluiten", clamp(input.lastMinuteDecisions * 4, 0, 20));
+  add("Onopgeloste punten bij vertrek", clamp(input.unresolvedAtDeparture * 5, 0, 25));
+  add("Onnodige reistijd", clamp(input.unnecessaryTravelMin / 10, 0, 10));
+  add("Wachten", clamp(input.waitingMin / 10, 0, 8));
+  add("Groepssplitsingen", clamp(input.groupSplits * 4, 0, 12));
+  add("Reserveringsproblemen", clamp(input.reservationIssues * 5, 0, 10));
+  add("Vervoersproblemen", clamp(input.transportIssues * 4, 0, 8));
+  add("BZT-verlies", clamp(input.bztLossMin / 15, 0, 10));
   add("Overrides", clamp(input.overrides * 3, 0, 9));
   if (w) {
     const split = groupSplitRisk(w);
-    if (split.level === "HIGH") add("Planned Group Split Risk HIGH", 5);
-    if (split.level === "CRITICAL") add("Planned Group Split Risk CRITICAL", 10);
+    if (split.level === "HIGH") add("Gepland groepssplitsingsrisico HOOG", 5);
+    if (split.level === "CRITICAL") add("Gepland groepssplitsingsrisico KRITIEK", 10);
   }
   const score = clamp(100 - d.reduce((s, x) => s + x.points, 0), 0, 100);
   return { score, deductions: d.sort((a, b) => b.points - a.points) };
@@ -54,10 +54,10 @@ export function weekendOutcome(input: OutcomeInput): WeekendOutcome {
 export function classify(outcome: number, ops: number): string {
   const goodOutcome = outcome >= 7.5;
   const goodOps = ops >= 70;
-  if (goodOutcome && goodOps) return "Solid process. Solid result.";
-  if (goodOutcome && !goodOps) return "Questionable process. Acceptable result.";
-  if (!goodOutcome && goodOps) return "Solid process. Disappointing result. Investigate external factors.";
-  return "Questionable process. Disappointing result. Full retrospective required.";
+  if (goodOutcome && goodOps) return "Degelijk proces. Degelijk resultaat.";
+  if (goodOutcome && !goodOps) return "Twijfelachtig proces. Acceptabel resultaat.";
+  if (!goodOutcome && goodOps) return "Degelijk proces. Tegenvallend resultaat. Onderzoek externe factoren.";
+  return "Twijfelachtig proces. Tegenvallend resultaat. Volledige terugblik vereist.";
 }
 
 export function retrospectiveScores(r: Retrospective, w?: Weekend) {

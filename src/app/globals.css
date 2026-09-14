@@ -149,3 +149,28 @@ table.erp tr:last-child td { border-bottom: 0; }
 
 @keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
 .live-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+/* ---------- Visuals & animaties (CSS-only, GPU-vriendelijk) ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes soft-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(10,63,184,0.45); } 60% { box-shadow: 0 0 0 7px rgba(10,63,184,0); } }
+@keyframes stripe-move { to { background-position: 32px 0; } }
+
+.rise { animation: rise 0.45s cubic-bezier(0.2,0.7,0.2,1) both; }
+.rise-1 { animation-delay: 0.05s } .rise-2 { animation-delay: 0.10s } .rise-3 { animation-delay: 0.15s } .rise-4 { animation-delay: 0.20s } .rise-5 { animation-delay: 0.25s } .rise-6 { animation-delay: 0.30s }
+.viz-arc { transition: stroke-dashoffset 0.9s cubic-bezier(0.2,0.7,0.2,1); }
+.viz-grow { transition: width 0.7s cubic-bezier(0.2,0.7,0.2,1); }
+.viz-grow-x { transform-origin: left center; animation: grow-x 0.7s cubic-bezier(0.2,0.7,0.2,1) both; }
+.viz-pop { animation: pop 0.35s cubic-bezier(0.2,0.7,0.2,1) both; }
+.viz-pulse { animation: soft-pulse 1.8s ease-out infinite; }
+.viz-hatched { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0 4px, transparent 4px 8px); }
+.viz-marquee { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 8px, transparent 8px 16px); background-size: 32px 32px; animation: stripe-move 1.2s linear infinite; }
+.card, .card-navy { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+a.card:hover, .card-hover:hover { box-shadow: 0 6px 20px -10px rgba(0,13,68,0.35); transform: translateY(-1px); }
+.progress-anim > div { transition: width 0.7s cubic-bezier(0.2,0.7,0.2,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .viz-grow-x, .viz-pop, .viz-pulse, .viz-marquee, .live-dot { animation: none !important; }
+  .viz-arc, .viz-grow, .card, .card-navy, .progress-anim > div { transition: none !important; }
+}

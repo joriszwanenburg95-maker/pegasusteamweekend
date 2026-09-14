@@ -65,7 +65,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     const unknown = hc.weekend.unknown;
     checks.push({
       key: "attendance",
-      label: "Attendance",
+      label: "Deelnemers",
       status: hc.locked ? "PASS" : unknown === 0 ? "WARNING" : unknown <= 2 ? "WARNING" : "FAIL",
       detail: hc.locked
         ? `Headcount locked: ${hc.weekend.going} weekendgangers.`
@@ -78,7 +78,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   // Slaapplaats
   checks.push({
     key: "accommodation",
-    label: "Accommodation",
+    label: "Slaapplaats",
     status:
       w.accommodation.type === "unknown" || !w.accommodation.name
         ? "UNKNOWN"
@@ -95,7 +95,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     const beds = hc.mismatches.find((m) => m.key === "beds");
     checks.push({
       key: "beds",
-      label: "Beds",
+      label: "Bedden",
       status: w.accommodation.ownShelterRequired
         ? "FAIL"
         : beds?.status === "OK"
@@ -119,17 +119,17 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
       detail = `${primary.name}: viability ${v.score}/100 (${v.grade}). ${v.verdict} Group Split Risk ${split.level}.`;
       if (split.level === "CRITICAL" && status === "PASS") status = "WARNING";
     }
-    checks.push({ key: "nightlife", label: "Nightlife", status, detail, gating: true });
+    checks.push({ key: "nightlife", label: "Avondlocatie", status, detail, gating: true });
   }
   // Eten
-  checks.push({ key: "dinner", label: "Dinner", status: food.status, detail: food.headline + (food.issues[0] ? ` — ${food.issues[0]}` : ""), gating: true });
+  checks.push({ key: "dinner", label: "Eten", status: food.status, detail: food.headline + (food.issues[0] ? ` — ${food.issues[0]}` : ""), gating: true });
   // Reserveringen
   {
     const mm = hc.mismatches.filter((m) => m.status === "CAPACITY MISMATCH");
     const unk = hc.mismatches.filter((m) => m.status === "UNKNOWN" && m.key !== "beds");
     checks.push({
       key: "reservations",
-      label: "Reservations",
+      label: "Reserveringen",
       status: mm.length ? "FAIL" : unk.length ? "WARNING" : "PASS",
       detail: mm.length
         ? mm.map((m) => `${m.label}: ${m.detail}`).join(" ")
@@ -140,11 +140,11 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     });
   }
   // Transport
-  checks.push({ key: "transport", label: "Transport", status: transport.status, detail: transport.detail, gating: true });
+  checks.push({ key: "transport", label: "Vervoer", status: transport.status, detail: transport.detail, gating: true });
   // Chauffeurs
   checks.push({
     key: "drivers",
-    label: "Drivers",
+    label: "Chauffeurs",
     status: w.vehicles.length === 0 ? "UNKNOWN" : transport.driversConfirmed ? "PASS" : "FAIL",
     detail: w.vehicles.length === 0
       ? "Geen auto's ingevoerd."
@@ -156,7 +156,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   // Stoelcapaciteit
   checks.push({
     key: "seats",
-    label: "Seat capacity",
+    label: "Stoelcapaciteit",
     status: transport.status === "UNKNOWN" ? "UNKNOWN" : transport.shortfall > 0 ? "FAIL" : "PASS",
     detail: `${transport.totalEffectiveCapacity} effectieve stoelen voor ${transport.travelers} passagiers.`,
     gating: true,
@@ -164,7 +164,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   // Bagagecapaciteit
   checks.push({
     key: "luggage",
-    label: "Luggage capacity",
+    label: "Bagagecapaciteit",
     status: w.vehicles.length === 0 ? "UNKNOWN" : luggage.ok ? "PASS" : "WARNING",
     detail: luggage.detail,
     gating: false,
@@ -176,7 +176,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     const code = a.accessCode.trim();
     checks.push({
       key: "access",
-      label: "Access details",
+      label: "Toegangsinformatie",
       status: has && code ? "PASS" : has ? "WARNING" : "UNKNOWN",
       detail: has
         ? `Check-in ${a.checkInFrom}–${a.checkInUntil}, contact ${a.contact}${code ? ", toegangscode bekend" : ", geen toegangscode/instructie"}.`
@@ -188,7 +188,7 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   if (w.sunday.relevant) {
     checks.push({
       key: "sunday",
-      label: "Sunday programme",
+      label: "Zondagprogramma",
       status: w.sunday.confirmed ? (w.sunday.travelFromAccommodationMin > 45 ? "WARNING" : "PASS") : "WARNING",
       detail: w.sunday.confirmed
         ? `${w.sunday.name} om ${w.sunday.startTime}, ${w.sunday.travelFromAccommodationMin} min vanaf accommodatie.`
@@ -207,10 +207,10 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
 
   const lockBlockers = checks
     .filter((c) => c.gating && (c.status === "FAIL" || c.status === "UNKNOWN"))
-    .map((c) => `${c.label}: ${c.status}`);
+    .map((c) => `${c.label}: ${c.status === "FAIL" ? "FOUT" : "ONBEKEND"}`);
   if (lockBlockers.length === 0 && percent < 80) {
     const warnings = checks.filter((c) => c.status === "WARNING").map((c) => c.label);
-    lockBlockers.push(`Readiness ${percent}% < 80% (warnings: ${warnings.join(", ")})`);
+    lockBlockers.push(`Gereedheid ${percent}% < 80% (let op: ${warnings.join(", ")})`);
   }
   const canLock = lockBlockers.length === 0;
 
@@ -262,8 +262,8 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
 
   const hoursToDeparture = hoursBetween(nowIso, w.departureAt);
   let riskNarrative: string;
-  if (w.phase === "COMPLETED") riskNarrative = "Weekend afgerond. Zie retrospective.";
-  else if (canLock) riskNarrative = "Alle gating checks PASS. Weekend mag LOCKED worden.";
+  if (w.phase === "COMPLETED") riskNarrative = "Weekend afgerond. Zie de terugblik.";
+  else if (canLock) riskNarrative = "Alle blokkerende checks in orde. Het weekend mag VERGRENDELD worden.";
   else if (hoursToDeparture < 24)
     riskNarrative = `Minder dan 24 uur tot vertrek met ${lockBlockers.length} open gating item(s). Elke beslissing die nu valt is per definitie last-minute; verwacht BZT-verlies en groepssplitsing.`;
   else if (hoursToDeparture < 72)

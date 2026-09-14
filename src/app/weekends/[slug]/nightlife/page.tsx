@@ -199,7 +199,7 @@ export default function NightlifePage() {
           </div>
         </Card>
 
-        <Card eyebrow="BZT estimate" title="Beschikbare Zuip Tijd">
+        <Card eyebrow="BZT estimate" title="Bier Zuip Tijd">
           <div className="grid grid-cols-3 gap-2">
             <div>
               <div className="erp-label">Bruto</div>

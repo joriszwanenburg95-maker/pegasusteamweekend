@@ -30,7 +30,7 @@ export function groupSplitRisk(w: Weekend): GroupSplitAssessment {
       level: "CRITICAL",
       reason: "Geen avondbestemming: niemand weet waar de groep heen gaat, laat staan hoe men terugkomt.",
       bztPenaltyFactor: PENALTY.CRITICAL,
-      factors: ["Geen nightlife destination"],
+      factors: ["Geen avondbestemming"],
     };
   }
 

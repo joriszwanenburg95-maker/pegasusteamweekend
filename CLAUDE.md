@@ -1,6 +1,7 @@
 # Pegasus HS1 · Teamweekend Control Room
 
 Next.js 16 (App Router, `src/`), Tailwind v4, TypeScript strict, lucide-react, vitest.
+Alle UI-tekst is Nederlands (interne enum-codes blijven Engels; vertaal via `nl()` in `src/lib/labels.ts`). Visuals: `src/components/viz.tsx` (Gauge, CountUp, StackedBar, TimeWindowBar, SeatGrid, DotRow, PhaseStepper) + CSS-animaties `.rise`, `.viz-*` in globals.css.
 Alle data is client-side (React context + localStorage, seed in `src/data/seed.ts`). Geen backend.
 
 - Domein-types: `src/lib/types.ts`

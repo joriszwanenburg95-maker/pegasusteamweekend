@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { CheckStatus } from "@/lib/engine";
 import type { WeekendPhase } from "@/lib/types";
+import { nl } from "@/lib/labels";
 
 /* ---------- Status ---------- */
 
@@ -68,12 +69,12 @@ export function Badge({ tone = "neutral", children, className = "", title }: { t
 }
 
 export function StatusBadge({ status, className = "" }: { status: string; className?: string }) {
-  return <Badge tone={toneForStatus(status)} className={className}>{status}</Badge>;
+  return <Badge tone={toneForStatus(status)} className={className}>{nl(status)}</Badge>;
 }
 
 export function PhaseBadge({ phase }: { phase: WeekendPhase }) {
   const tone: Tone = phase === "COMPLETED" ? "neutral" : phase === "LIVE" ? "go" : phase === "LOCKED" ? "navy" : phase === "READY" ? "go" : phase === "PLANNING" ? "warn" : "unknown";
-  return <Badge tone={tone}>{phase}</Badge>;
+  return <Badge tone={tone}>{nl(phase)}</Badge>;
 }
 
 /* ---------- Layout ---------- */
@@ -125,7 +126,7 @@ export function Kpi({ label, value, unit, sub, tone, className = "" }: { label: 
 export function Progress({ value, tone, className = "" }: { value: number; tone?: Tone; className?: string }) {
   const bar = tone === "go" ? "bg-go" : tone === "warn" ? "bg-warn" : tone === "nogo" ? "bg-nogo" : "bg-cobalt";
   return (
-    <div className={`h-2 w-full rounded-full bg-sunken overflow-hidden ${className}`}>
+    <div className={`h-2 w-full rounded-full bg-sunken overflow-hidden progress-anim ${className}`}>
       <div className={`h-full ${bar}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
     </div>
   );

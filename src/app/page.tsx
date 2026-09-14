@@ -80,6 +80,9 @@ export default function ControlRoomPage() {
         subtitle="Nijmegen · Ark van Oost — readiness gate, BZT-optimizer en Bob Risk Index voor elk teamweekend."
         actions={
           <>
+            <Link href="/intro" className="btn btn-primary">
+              Waarom dit systeem?
+            </Link>
             <Link href="/weekends" className="btn">
               Alle weekends
             </Link>

@@ -10,7 +10,7 @@ Volkomen overdreven corporate governance voor een weekend weg met het team.
 - **Readiness gate** (DRAFT → PLANNING → READY → LOCKED → LIVE → COMPLETED) met checks op attendance,
   accommodatie, bedden, avondlocatie, eten, reserveringen, transport, chauffeurs, stoel- en bagagecapaciteit,
   toegangsinformatie en zondagprogramma. Deadlines T-7D / T-72H / T-24H / DEPARTURE. **BOB lead time**.
-- **Nightlife Viability Score** (BZT-window, afstand, transfers, sluitingstijd, groep samen, reservering, fallback).
+- **Introductiepagina** (waarom en hoe), **Nightlife Viability Score** (BZT-window, afstand, transfers, sluitingstijd, groep samen, reservering, fallback).
 - **Group Split Risk** (LOW / MEDIUM / HIGH / CRITICAL) als negatieve factor in BZT en Operational Quality.
 - **Transport Capacity 2.0**: effectieve passagierscapaciteit per auto op basis van cargo en bagage.
 - **Headcount lock** met aparte attendance voor wedstrijd, weekend, overnachting, zondag en diner; capacity mismatch.
