@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, BookOpenCheck, ShieldCheck } from "lucide-react";
 import { useStore } from "@/store/store";
 import type { Weekend } from "@/lib/types";
 import {
   analyzeCriticalPath,
   bobRiskIndex,
+  carryOverLessons,
   estimateBzt,
   evaluateReadiness,
   formatDate,
@@ -16,6 +17,7 @@ import {
   formatHours,
   groupSplitRisk,
   hoursBetween,
+  lessonChecklistItems,
   parseClock,
   primaryNightlife,
   retrospectiveScores,
@@ -33,6 +35,7 @@ import {
   type Tone,
 } from "@/components/ui";
 import { CountUp, Gauge, StackedBar, TimeWindowBar, type Segment, type TimeSpan } from "@/components/viz";
+import { BobAlarm, BobAvatar, BobGauge } from "@/components/bob";
 import { nl } from "@/lib/labels";
 
 /** Toon voor de Bob-aanlooptijd-kwalificatie uit de engine. */
@@ -41,13 +44,6 @@ function toneForLeadTime(label: string): Tone {
   if (label === "Kort") return "warn";
   if (label === "Extreem kort" || label === "Plan pas definitief ná vertrek") return "nogo";
   return "unknown";
-}
-
-/** Hoger = risicovoller: de Bob-index draait de kleurschaal om. */
-function toneForBob(level: string): Tone {
-  if (level === "NEGLIGIBLE") return "go";
-  if (level === "MODERATE" || level === "ELEVATED") return "warn";
-  return "nogo";
 }
 
 /** Eerstvolgend niet-afgerond weekend: vroegste vertrek in de toekomst, anders het eerste open weekend. */
@@ -115,7 +111,12 @@ export default function ControlRoomPage() {
         }
       />
 
-      {next ? <NextWeekendHero weekend={next} now={now} /> : (
+      {next ? (
+        <>
+          <NextWeekendHero weekend={next} now={now} />
+          <BobAlarm bob={bobRiskIndex(next, now)} href={`/weekends/${next.slug}/readiness`} className="rise rise-2" />
+        </>
+      ) : (
         <EmptyState title="Geen weekend in planning">
           <Link href="/weekends" className="underline">
             Maak een nieuw weekend aan
@@ -150,8 +151,9 @@ export default function ControlRoomPage() {
 
       <ReadinessBoard weekends={open} now={now} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {next ? <DeadlinesCard weekend={next} now={now} /> : null}
+        <LessonsCarryOver weekends={state.weekends} target={next} />
         <HistoricalBenchmark rows={scored} />
       </div>
 
@@ -205,13 +207,7 @@ function NextWeekendHero({ weekend, now }: { weekend: Weekend; now: string }) {
           />
         </HeroTile>
         <HeroTile label="Bob-risico-index" note={`${nl(bob.level)} · ${bob.tooltip}`} title={bob.primaryDriver}>
-          <Gauge
-            value={bob.score}
-            size={104}
-            tone={toneForBob(bob.level)}
-            track="rgba(255,255,255,0.14)"
-            textColor="#fff"
-          />
+          <BobGauge bob={bob} size={104} track="rgba(255,255,255,0.14)" showLevel={false} />
         </HeroTile>
         <HeroTile
           label={hours < 0 ? "Verstreken" : "Tot vertrek"}
@@ -395,7 +391,10 @@ function ReadinessBoard({ weekends, now }: { weekends: Weekend[]; now: string })
                       {r.failCount > 0 ? <span className="text-nogo font-semibold">{r.failCount}</span> : 0}
                     </td>
                     <td className="text-right erp-mono" title={bob.tooltip}>
-                      {bob.score}
+                      <span className="inline-flex items-center gap-1.5">
+                        <BobAvatar bob={bob} size={22} />
+                        {bob.score}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap">
                       <Badge tone={toneForLeadTime(r.bobLeadTimeLabel)}>{r.bobLeadTimeLabel}</Badge>
@@ -445,6 +444,59 @@ function DeadlinesCard({ weekend, now }: { weekend: Weekend; now: string }) {
           </div>
         ))}
       </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/** Lessen uit afgeronde weekenden als aandachtspunten voor het eerstvolgende weekend. */
+function LessonsCarryOver({ weekends, target }: { weekends: Weekend[]; target: Weekend | null }) {
+  const lessons = carryOverLessons(weekends, target ?? undefined);
+  const anchored = target ? lessonChecklistItems(target) : [];
+  const ownerName = (id: string | null) => target?.participants.find((p) => p.id === id)?.name ?? "geen eigenaar";
+  return (
+    <Card
+      eyebrow={target ? `Aandachtspunten · ${target.name}` : "Aandachtspunten"}
+      title="Lessen uit eerdere weekenden"
+      className="rise rise-4"
+      actions={
+        <Link href="/history" className="btn btn-sm">
+          <BookOpenCheck size={13} /> Archief
+        </Link>
+      }
+    >
+      {anchored.length > 0 && (
+        <div className="mb-3">
+          <div className="erp-label mb-1.5">Verankerd op de checklist</div>
+          <div className="space-y-1.5">
+            {anchored.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-[6px] border border-line bg-sunken px-2.5 py-1.5">
+                <StatusBadge status={c.status} />
+                <span className="text-[12.5px] font-semibold text-navy">{c.label}</span>
+                <span className="text-[11px] text-faint ml-auto">{ownerName(c.ownerId)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {lessons.length === 0 ? (
+        <div className="text-sm text-muted">Nog geen lessen uit afgeronde weekenden.</div>
+      ) : (
+        <ol className="space-y-1.5 text-[12.5px] text-fg">
+          {lessons.map((l, i) => (
+            <li key={`${l.weekendId}-${i}`} className="flex gap-2">
+              <span className="erp-mono text-faint shrink-0">{String(i + 1).padStart(2, "0")}</span>
+              <span>
+                {l.text}{" "}
+                <Link href={`/weekends/${l.weekendSlug}`} className="text-faint hover:underline whitespace-nowrap">
+                  · {l.weekendName.replace("Teamweekend ", "")}
+                </Link>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </Card>
   );
 }

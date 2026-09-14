@@ -3,6 +3,7 @@ import { headcount } from "./headcount";
 import { primaryNightlife } from "./nightlife";
 import { assessTransport } from "./transport";
 import { hoursBetween } from "./time";
+import { chipsGuardStatus } from "./lessons";
 
 /**
  * BOB RISK INDEX — puur ludieke secundaire KPI (0-100).
@@ -53,6 +54,9 @@ export function bobRiskIndex(w: Weekend, nowIso: string): BobRiskIndex {
   const hoursToDeparture = hoursBetween(nowIso, w.departureAt);
   if (hoursToDeparture >= 0 && hoursToDeparture < 24 && !w.planFinalAt)
     drivers.push({ label: "Minder dan 24 uur tot vertrek en het plan is nog niet definitief.", points: 10 });
+  // Les Maaseik: onbewaakte chips van Rik verdwijnen. Checklistpunt open = risico.
+  const chips = chipsGuardStatus(w);
+  if (chips === "open") drivers.push({ label: "Chips van Rik nog onbewaakt (les Maaseik).", points: 6 });
 
   // Verlagend
   if (a.confirmed && (a.type === "hotel" || a.type === "hostel" || a.type === "holidayHome"))
@@ -63,6 +67,7 @@ export function bobRiskIndex(w: Weekend, nowIso: string): BobRiskIndex {
   if (t.status === "PASS") drivers.push({ label: "Vervoer sluit.", points: -10 });
   if (w.planFinalAt && hoursBetween(w.planFinalAt, w.departureAt) > 72)
     drivers.push({ label: "Plan meer dan 72 uur vooraf compleet.", points: -12 });
+  if (chips === "done") drivers.push({ label: "Chips van Rik onder bewaking.", points: -3 });
 
   const base = 35;
   const score = Math.max(0, Math.min(100, base + drivers.reduce((s, d) => s + d.points, 0)));

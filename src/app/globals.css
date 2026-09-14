@@ -174,3 +174,43 @@ a.card:hover, .card-hover:hover { box-shadow: 0 6px 20px -10px rgba(0,13,68,0.35
   .rise, .viz-grow-x, .viz-pop, .viz-pulse, .viz-marquee, .live-dot { animation: none !important; }
   .viz-arc, .viz-grow, .card, .card-navy, .progress-anim > div { transition: none !important; }
 }
+
+/* ---------- Bob-risico-index: mascotte-animaties (CSS-only) ---------- */
+@keyframes bob-sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes bob-wobble { 0%,100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.04); } }
+@keyframes bob-shake {
+  0%,100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-2px) rotate(-3deg); }
+  40% { transform: translateX(2px) rotate(3deg); }
+  60% { transform: translateX(-2px) rotate(-2deg); }
+  80% { transform: translateX(2px) rotate(2deg); }
+}
+@keyframes bob-ring-warn { 0%,100% { box-shadow: 0 0 0 0 rgba(180,83,9,0.55); } 70% { box-shadow: 0 0 0 10px rgba(180,83,9,0); } }
+@keyframes bob-ring-alarm { 0%,100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.6); } 70% { box-shadow: 0 0 0 12px rgba(185,28,28,0); } }
+@keyframes bob-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes bob-flash { 0%,100% { opacity: 0; } 50% { opacity: 0.45; } }
+@keyframes bob-tape-move { to { background-position: 28.28px 0; } }
+@keyframes bob-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.bob-calm { filter: saturate(0.8); }
+.bob-sway { animation: bob-sway 3s ease-in-out infinite; }
+.bob-wobble { animation: bob-wobble 1.6s ease-in-out infinite; }
+.bob-shake { animation: bob-shake 0.7s ease-in-out infinite; }
+.bob-panic { animation: bob-shake 0.32s linear infinite; }
+.bob-ring-warn { animation: bob-ring-warn 1.6s ease-out infinite; }
+.bob-ring-alarm { animation: bob-ring-alarm 1.2s ease-out infinite; }
+.bob-blink { animation: bob-blink 1s steps(1) infinite; }
+.bob-flash { animation: bob-flash 0.8s ease-in-out infinite; }
+/* Waarschuwingstape: zwart/geel (verhoogd) of zwart/rood (ernstig) */
+.bob-tape { background-image: repeating-linear-gradient(135deg, #111 0 10px, #facc15 10px 20px); animation: bob-tape-move 1.1s linear infinite; }
+.bob-tape-alarm { background-image: repeating-linear-gradient(135deg, #111 0 10px, var(--nogo) 10px 20px); animation: bob-tape-move 0.6s linear infinite; }
+.bob-ticker-wrap { overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.bob-ticker { display: inline-flex; animation: bob-ticker 22s linear infinite; will-change: transform; }
+.bob-ticker-wrap:hover .bob-ticker { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bob-sway, .bob-wobble, .bob-shake, .bob-panic, .bob-ring-warn, .bob-ring-alarm, .bob-blink, .bob-flash, .bob-tape, .bob-tape-alarm { animation: none !important; }
+  .bob-ticker { animation: none !important; flex-wrap: wrap; white-space: normal; }
+  .bob-ticker-wrap { mask-image: none; white-space: normal; }
+  .bob-flash { opacity: 0.25; }
+}

@@ -98,6 +98,13 @@ export default function GlossaryPage() {
                 minder BZT.
               </p>
             </Term>
+            <Term term="Chipsprotocol" abbr="les Maaseik">
+              <p>
+                In Maaseik zijn de chips van Rik gestolen; de dader is nooit officieel vastgesteld. Sindsdien staat
+                &ldquo;chips van Rik bewaakt&rdquo; als teammateriaal op elke checklist, met een eigenaar.
+              </p>
+              <p className="text-faint">Open = +6 op de Bob-index · afgevinkt = −3. Wie steelt, haalt de volgende ronde.</p>
+            </Term>
             <Term term="Operationele kwaliteit" abbr="0–100">
               <p>
                 Kwaliteit van het <em>proces</em>. Start op 100, met aftrek voor last-minute besluiten, open punten bij

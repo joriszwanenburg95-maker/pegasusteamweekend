@@ -14,6 +14,7 @@ import {
   Users,
   Utensils,
   ClipboardList,
+  Cookie,
   Gauge as GaugeIcon,
 } from "lucide-react";
 import { useStore } from "@/store/store";
@@ -22,6 +23,7 @@ import { Gauge, PhaseStepper } from "@/components/viz";
 import { retrospectiveScores, evaluateReadiness, bobRiskIndex } from "@/lib/engine";
 import { WEEKEND_PHASES } from "@/lib/types";
 import { nl } from "@/lib/labels";
+import { BobGauge } from "@/components/bob";
 
 const LESSONS: { icon: ReactNode; text: string }[] = [
   { icon: <Tent size={18} />, text: "Eigen tent is geen slaapplaats" },
@@ -29,6 +31,7 @@ const LESSONS: { icon: ReactNode; text: string }[] = [
   { icon: <Beer size={18} />, text: "Vroeg dicht is geen avond" },
   { icon: <CarFront size={18} />, text: "Stoelen minus bagage is capaciteit" },
   { icon: <Users size={18} />, text: "Reserveren zonder aantal is gokken" },
+  { icon: <Cookie size={18} />, text: "Onbewaakte chips van Rik verdwijnen" },
 ];
 
 const STEPS: { icon: ReactNode; title: string; seg: string; line: string }[] = [
@@ -200,12 +203,11 @@ export default function IntroPage() {
         </Card>
         <Card eyebrow="Ludieke KPI" title="Bob-risico-index" className="rise rise-6">
           <div className="flex items-center gap-4">
-            <Gauge
-              value={nextBob?.score ?? 0}
-              size={104}
-              tone={nextBob && nextBob.score >= 70 ? "nogo" : nextBob && nextBob.score >= 25 ? "warn" : "go"}
-              label={nextBob ? nl(nextBob.level) : undefined}
-            />
+            {nextBob ? (
+              <BobGauge bob={nextBob} size={104} />
+            ) : (
+              <Gauge value={0} size={104} tone="unknown" />
+            )}
             <p className="text-[13px] text-muted leading-snug">
               0–100 op basis van échte planningdata: geen bed, eten onbekend, taxi niet geregeld omhoog; hotel
               bevestigd, eten gereserveerd, kroeg op loopafstand omlaag. Telt nooit mee in GO / NO GO.

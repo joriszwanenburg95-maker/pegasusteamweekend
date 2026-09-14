@@ -9,6 +9,7 @@ import {
 } from "@/lib/engine";
 import { WEEKEND_PHASES, type DecisionTopic, type WeekendPhase } from "@/lib/types";
 import { nl } from "@/lib/labels";
+import { BOB_COPY, BobGauge } from "@/components/bob";
 import { newId } from "@/store/store";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
 import {
@@ -111,7 +112,6 @@ export default function ReadinessPage() {
 
   const bobPlus = bob.drivers.filter((d) => d.points > 0).reduce((s, d) => s + d.points, 0);
   const bobMinus = Math.abs(bob.drivers.filter((d) => d.points < 0).reduce((s, d) => s + d.points, 0));
-  const bobTone = toneForStatus(bob.level);
 
   const hoursToDeparture = readiness.deadlines.find((d) => d.key === "DEPARTURE")?.hoursUntil ?? 0;
   const nowPos = railPos(Math.max(0, hoursToDeparture));
@@ -198,8 +198,9 @@ export default function ReadinessPage() {
           className="rise rise-2"
         >
           <div className="flex items-center gap-3" title={bob.tooltip}>
-            <Gauge value={bob.score} size={96} stroke={9} tone={bobTone} label="Bob" />
+            <BobGauge bob={bob} size={96} stroke={8} showLevel={false} />
             <div className="min-w-0 flex-1">
+              <div className="text-[12.5px] font-semibold text-navy leading-snug mb-1.5">{BOB_COPY[bob.level].headline}</div>
               <div className="erp-label">Zwaarste factor</div>
               <div className="erp-mono text-[11.5px] leading-snug text-fg">{bob.primaryDriver}</div>
               <div className="mt-2 text-[11px] text-faint">&ldquo;{bob.tooltip}&rdquo;</div>

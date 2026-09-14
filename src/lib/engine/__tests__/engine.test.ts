@@ -4,6 +4,8 @@ import {
   analyzeCriticalPath,
   assessTransport,
   bobRiskIndex,
+  carryOverLessons,
+  chipsGuardStatus,
   classify,
   clockSpanMinutes,
   effectivePassengerCapacity,
@@ -12,6 +14,7 @@ import {
   eveningContext,
   groupSplitRisk,
   headcount,
+  lessonChecklistItems,
   nightlifeViability,
   operationalQuality,
   retrospectiveScores,
@@ -154,6 +157,39 @@ describe("bob risk index", () => {
     };
     const b = bobRiskIndex(w, NOW);
     expect(b.score).toBeLessThan(40);
+  });
+  it("unguarded chips of Rik raise the index; guarded chips lower it (lesson Maaseik)", () => {
+    expect(chipsGuardStatus(OCTOBER_2026)).toBe("open");
+    const open = bobRiskIndex(OCTOBER_2026, NOW);
+    expect(open.drivers.find((d) => /chips/i.test(d.label))?.points).toBe(6);
+    const guarded = {
+      ...OCTOBER_2026,
+      checklist: OCTOBER_2026.checklist.map((c) => (/chips/i.test(c.label) ? { ...c, status: "done" as const } : c)),
+    };
+    expect(chipsGuardStatus(guarded)).toBe("done");
+    const g = bobRiskIndex(guarded, NOW);
+    expect(g.drivers.find((d) => /chips/i.test(d.label))?.points).toBe(-3);
+    expect(g.score).toBe(open.score - 9);
+    const none = { ...OCTOBER_2026, checklist: OCTOBER_2026.checklist.filter((c) => !/chips/i.test(c.label)) };
+    expect(chipsGuardStatus(none)).toBe("missing");
+    expect(bobRiskIndex(none, NOW).drivers.some((d) => /chips/i.test(d.label))).toBe(false);
+  });
+});
+
+describe("lessons carry over", () => {
+  it("Maaseik lessons (incl. chips) become attention points for October 2026", () => {
+    const lessons = carryOverLessons([OCTOBER_2026, MAASEIK], OCTOBER_2026);
+    expect(lessons.length).toBe(MAASEIK.retrospective.lessonsLearned.length);
+    expect(lessons.every((l) => l.weekendId === MAASEIK.id)).toBe(true);
+    expect(lessons.some((l) => /chips van Rik/i.test(l.text))).toBe(true);
+  });
+  it("does not carry lessons from later or unfinished weekends", () => {
+    expect(carryOverLessons([OCTOBER_2026, MAASEIK], MAASEIK)).toEqual([]);
+    expect(carryOverLessons([OCTOBER_2026])).toEqual([]);
+  });
+  it("chips guard is anchored on the checklist of new weekends", () => {
+    expect(lessonChecklistItems(OCTOBER_2026).map((c) => c.label)).toContain("chips van Rik bewaakt (les Maaseik)");
+    expect(lessonChecklistItems(blankWeekend("w-n", "N", NOW)).length).toBe(1);
   });
 });
 

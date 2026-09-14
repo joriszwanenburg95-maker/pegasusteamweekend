@@ -25,10 +25,10 @@ import {
   StatusBadge,
   toneForPercent,
   toneForStatus,
-  type Tone,
 } from "@/components/ui";
 import { CountUp, DotRow, Gauge } from "@/components/viz";
 import { nl } from "@/lib/labels";
+import { BOB_COPY, BobGauge } from "@/components/bob";
 
 type AttendanceKey = "match" | "weekend" | "overnight" | "sunday" | "dinner";
 
@@ -42,13 +42,6 @@ const ATTENDANCE_ROWS: { key: AttendanceKey; label: string }[] = [
 
 /** Aanwezigheid gegroepeerd weergeven: eerst wie meegaat, dan onbekend, dan afwezig. */
 const ORDER: Record<Attendance, number> = { going: 0, unknown: 1, notGoing: 2 };
-
-/** Hoger = risicovoller: de Bob-index draait de kleurschaal om. */
-function toneForBob(score: number): Tone {
-  if (score >= 70) return "nogo";
-  if (score >= 25) return "warn";
-  return "go";
-}
 
 export default function WeekendOverviewPage() {
   const { weekend, now } = useCurrentWeekend();
@@ -88,14 +81,11 @@ function Overview({ weekend: w, now }: { weekend: Weekend; now: string }) {
           </div>
         </Card>
         <Card className="flex flex-col items-center justify-center py-4 px-5">
-          <Gauge
-            value={bob.score}
-            size={132}
-            tone={toneForBob(bob.score)}
-            label="Bob-index"
-            sublabel={nl(bob.level)}
-          />
-          <div className="text-[11.5px] text-muted mt-1.5 text-center max-w-[190px]" title={bob.primaryDriver}>
+          <BobGauge bob={bob} size={132} stroke={10} />
+          <div className="text-[12px] font-semibold text-navy mt-2 text-center max-w-[200px] leading-snug">
+            {BOB_COPY[bob.level].headline}
+          </div>
+          <div className="text-[11.5px] text-muted mt-1 text-center max-w-[200px]" title={bob.primaryDriver}>
             {bob.tooltip}
           </div>
         </Card>

@@ -63,7 +63,7 @@ export const MAASEIK: Weekend = {
   phase: "COMPLETED",
   historical: true,
   summary:
-    "Eerste historische case. Camping De Boomgaard, zeven tentplaatsen, twee man per tent, tenten en ontbijt zelf regelen. Avondprogramma kort voor vertrek nog niet definitief; lokale horeca 's avonds beperkt; restaurant bij late reservering vol. Gezellig geworden. Datum indicatief.",
+    "Eerste historische case. Camping De Boomgaard, zeven tentplaatsen, twee man per tent, tenten en ontbijt zelf regelen. Avondprogramma kort voor vertrek nog niet definitief; lokale horeca 's avonds beperkt; restaurant bij late reservering vol. Chips van Rik gestolen; dader nooit officieel vastgesteld. Gezellig geworden. Datum indicatief.",
   departureAt: maaseikDeparture,
   returnAt: "2025-09-28T16:00:00.000Z",
   match: {
@@ -264,6 +264,7 @@ export const MAASEIK: Weekend = {
       "Beoordeel lokale horeca op sluitingstijd en groepscapaciteit, niet alleen op afstand.",
       "Een taxirit naar een andere stad is een BZT-verlies van ~90 minuten, niet een 'oplossing'.",
       "Basiszaken (eten, toegang, benodigdheden) horen bij T-7D op tafel, niet bij T-24H.",
+      "De chips van Rik zijn gestolen. Onbewaakte teamsnacks verdwijnen: elk volgend weekend krijgt chipsbewaking een eigenaar op de checklist. Wie steelt, haalt de volgende ronde.",
     ],
   },
 };
@@ -442,6 +443,7 @@ export const OCTOBER_2026: Weekend = {
     { id: "c8", section: "teamEquipment", label: "shirttas", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
     { id: "c9", section: "teamEquipment", label: "ballen", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
     { id: "c10", section: "teamEquipment", label: "wedstrijdmateriaal (bidons, tape, EHBO)", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
+    { id: "c11", section: "teamEquipment", label: "chips van Rik bewaakt (les Maaseik)", ownerId: "p-rik", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
   ],
   criticalPath: [
     { id: "s1", label: "EINDE WEDSTRIJD", durationMin: 0, category: "logistics", optional: false },
@@ -536,6 +538,7 @@ export function blankWeekend(id: string, name: string, departureAt: string): Wee
       { id: "c6", section: "teamEquipment", label: "shirttas", ownerId: null, status: "open", deadline: null },
       { id: "c7", section: "teamEquipment", label: "ballen", ownerId: null, status: "open", deadline: null },
       { id: "c8", section: "teamEquipment", label: "relevant wedstrijdmateriaal", ownerId: null, status: "open", deadline: null },
+      { id: "c9", section: "teamEquipment", label: "chips van Rik bewaakt (les Maaseik)", ownerId: null, status: "open", deadline: null },
     ],
     criticalPath: [
       { id: "s1", label: "EINDE WEDSTRIJD", durationMin: 0, category: "logistics", optional: false },
@@ -558,7 +561,7 @@ export function blankWeekend(id: string, name: string, departureAt: string): Wee
   };
 }
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 export function seedState(): AppState {
   return {
