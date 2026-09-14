@@ -56,7 +56,7 @@ export function nightlifeViability(
 
   // 1. BZT-window (max 30)
   const window = clockSpanMinutes(ctx.arrivalClock, n.closesAt) ?? 0;
-  const bztWindowMin = window > 12 * 60 ? 0 : window; // sluit vóór aankomst → 0
+  const bztWindowMin = window > 14 * 60 ? 0 : window; // sluit vóór aankomst → 0
   let wPts = 0;
   if (bztWindowMin >= 240) wPts = 30;
   else if (bztWindowMin >= 180) wPts = 24;

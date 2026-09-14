@@ -24,7 +24,7 @@ export interface Deadline {
   at: string;
   hoursUntil: number;
   passed: boolean;
-  /** Wat op dit moment minimaal PASS moet zijn. */
+  /** Labels van checks die op dit moment minimaal PASS moeten zijn. */
   required: string[];
   missing: string[];
   status: "OK" | "AT RISK" | "MISSED" | "UPCOMING";
@@ -116,7 +116,8 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     if (primary) {
       const v = nightlifeViability(primary, eveningContext(w));
       status = v.score >= 70 ? "PASS" : v.score >= 50 ? "WARNING" : "FAIL";
-      detail = `${primary.name}: viability ${v.score}/100 (${v.grade}). ${v.verdict}`;
+      detail = `${primary.name}: viability ${v.score}/100 (${v.grade}). ${v.verdict} Group Split Risk ${split.level}.`;
+      if (split.level === "CRITICAL" && status === "PASS") status = "WARNING";
     }
     checks.push({ key: "nightlife", label: "Nightlife", status, detail, gating: true });
   }
@@ -207,7 +208,11 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
   const lockBlockers = checks
     .filter((c) => c.gating && (c.status === "FAIL" || c.status === "UNKNOWN"))
     .map((c) => `${c.label}: ${c.status}`);
-  const canLock = lockBlockers.length === 0 && percent >= 80;
+  if (lockBlockers.length === 0 && percent < 80) {
+    const warnings = checks.filter((c) => c.status === "WARNING").map((c) => c.label);
+    lockBlockers.push(`Readiness ${percent}% < 80% (warnings: ${warnings.join(", ")})`);
+  }
+  const canLock = lockBlockers.length === 0;
 
   // Deadlines
   const dep = new Date(w.departureAt).getTime();
@@ -229,7 +234,15 @@ export function evaluateReadiness(w: Weekend, nowIso: string): ReadinessReport {
     if (passed && missing.length) status = "MISSED";
     else if (passed) status = "OK";
     else if (missing.length && hoursUntil < 48) status = "AT RISK";
-    return { key, at, hoursUntil, passed, required: requiredAt[key], missing, status };
+    return {
+      key,
+      at,
+      hoursUntil,
+      passed,
+      required: requiredAt[key].map((k) => byKey.get(k)?.label ?? k),
+      missing,
+      status,
+    };
   });
 
   // BOB lead time

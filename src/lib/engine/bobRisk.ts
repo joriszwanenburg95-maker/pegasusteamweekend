@@ -50,6 +50,9 @@ export function bobRiskIndex(w: Weekend, nowIso: string): BobRiskIndex {
     return h >= 0 && h < 24;
   }).length;
   if (lastMinute > 0) drivers.push({ label: `${lastMinute} plan change(s) within 24h of departure.`, points: Math.min(20, lastMinute * 7) });
+  const hoursToDeparture = hoursBetween(nowIso, w.departureAt);
+  if (hoursToDeparture >= 0 && hoursToDeparture < 24 && !w.planFinalAt)
+    drivers.push({ label: "Less than 24h to departure and the plan is still not final.", points: 10 });
 
   // Verlagend
   if (a.confirmed && (a.type === "hotel" || a.type === "hostel" || a.type === "holidayHome"))
@@ -68,6 +71,5 @@ export function bobRiskIndex(w: Weekend, nowIso: string): BobRiskIndex {
   const positive = drivers.filter((d) => d.points > 0).sort((a, b) => b.points - a.points);
   const negative = drivers.filter((d) => d.points < 0).sort((a, b) => a.points - b.points);
   const primaryDriver = positive[0]?.label ?? negative[0]?.label ?? "No planning data yet.";
-  void nowIso;
   return { score, level, drivers, primaryDriver, tooltip: "One Bob is enough." };
 }

@@ -41,13 +41,12 @@ export function assessFood(w: Weekend): FoodAssessment {
   if (d.travelMin > 30) issues.push(`${d.travelMin} minuten reistijd naar het eten: transfer op het critical path.`);
   if (!d.fallback.trim()) issues.push("Geen fallback wanneer de locatie vol/gesloten blijkt.");
 
-  const hard = issues.some(
-    (i) => i.startsWith("Niet gereserveerd") || i.startsWith("Gereserveerd voor"),
-  );
-  const status: CheckStatus = hard ? "WARNING" : issues.length ? "WARNING" : "PASS";
+  let status: CheckStatus = issues.length ? "WARNING" : "PASS";
+  if (!d.reserved && eaters > 8) status = "FAIL";
+  if (d.reserved && d.reservedCount < eaters) status = "FAIL";
 
   return {
-    status: !d.reserved && eaters > 8 ? "FAIL" : status,
+    status,
     headline: d.reserved
       ? `${d.location} · ${d.time} · ${d.reservedCount} pers.`
       : `${d.location} · niet gereserveerd`,

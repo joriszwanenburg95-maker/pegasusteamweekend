@@ -70,6 +70,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       /* corrupt storage → seed */
     }
+    // localStorage is alleen client-side beschikbaar; hydrateren ná mount is hier bewust.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
 

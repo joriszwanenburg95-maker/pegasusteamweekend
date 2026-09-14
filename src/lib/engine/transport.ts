@@ -145,7 +145,10 @@ export function assessTransport(w: Weekend): TransportAssessment {
 /** Bagagecapaciteit: som van cargo-units vs. wat mee moet. Ruwe indicatie. */
 export function luggageCheck(w: Weekend) {
   const cargoUnits: Record<CargoSize, number> = { small: 1, medium: 2, large: 3 };
-  const supply = w.vehicles.reduce((s, v) => s + cargoUnits[v.cargoSize], 0);
+  const byId = new Map(w.participants.map((p) => [p.id, p]));
+  const supply = w.vehicles
+    .filter((v) => v.driverId && byId.get(v.driverId)?.weekend === "going")
+    .reduce((s, v) => s + cargoUnits[v.cargoSize], 0);
   const travelersCount = travelers(w.participants).length;
   // Vuistregel: 1 cargo-unit per 3 personen bij normaal weekend, per 1.5 bij kamperen.
   const perUnit = w.accommodation.ownShelterRequired ? 1.5 : 3;

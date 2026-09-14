@@ -51,7 +51,16 @@ export function headcount(w: Weekend): HeadcountSummary {
   const mismatches: CapacityMismatch[] = [];
 
   // Diner-reservering vs bevestigde eters
-  if (w.dinner.known) {
+  if (!w.dinner.known) {
+    mismatches.push({
+      key: "dinner",
+      label: "Restaurant",
+      reserved: 0,
+      confirmed: dinner.going,
+      status: "UNKNOWN",
+      detail: `Eten nog onbekend; ${dinner.going} bevestigde eters zonder locatie.`,
+    });
+  } else {
     const confirmed = dinner.going;
     const reserved = w.dinner.reserved ? w.dinner.reservedCount : 0;
     let status: CapacityMismatch["status"] = "OK";

@@ -1,7 +1,7 @@
 import type { Weekend } from "../types";
 import { analyzeCriticalPath } from "./criticalPath";
 import { groupSplitRisk } from "./groupSplit";
-import { eveningContext, nightlifeViability, primaryNightlife } from "./nightlife";
+import { primaryNightlife } from "./nightlife";
 import { clockSpanMinutes, isoToClock } from "./time";
 
 /**
@@ -38,13 +38,9 @@ export function estimateBzt(w: Weekend): BztEstimate {
       detail: !n ? "Geen primaire avondlocatie." : "Geen FIRST BEER op het critical path.",
     };
   }
-  // Als er nog logistiek (diner etc.) na first beer op het pad staat, telt BZT vanaf first beer maar
-  // de venue-window vanaf aankomst; we nemen het ruimste realistische: first beer → sluiting.
-  const ctx = eveningContext(w);
-  const viability = nightlifeViability(n, ctx);
-  const gross = Math.max(0, Math.min(clockSpanMinutes(firstBeer, n.closesAt) ?? 0, 9 * 60));
-  const window = viability.bztWindowMin;
-  const grossMin = Math.max(gross, window);
+  // BZT telt vanaf FIRST BEER tot sluiting; een sluiting vóór first beer (span > 14u) telt als 0.
+  const span = clockSpanMinutes(firstBeer, n.closesAt) ?? 0;
+  const grossMin = span > 14 * 60 ? 0 : Math.min(span, 9 * 60);
   const splitPenaltyMin = Math.round(grossMin * split.bztPenaltyFactor);
   return {
     grossMin,
