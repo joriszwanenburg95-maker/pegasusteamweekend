@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/store/store";
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   description:
     "Gereedheidspoort, BZT-optimalisatie en Bob-risico-index voor de teamweekenden van Pegasus Heren 1, Nijmegen. Hup blauw.",
   icons: { icon: "/pegasus-logo-256.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000d44",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
