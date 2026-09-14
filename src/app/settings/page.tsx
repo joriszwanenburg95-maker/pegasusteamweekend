@@ -78,14 +78,19 @@ export default function SystemSettingsPage() {
       setMessage({ tone: "nogo", text: "Veld “weekends” ontbreekt of is geen array." });
       return;
     }
+    if (!candidate.calendar || !Array.isArray(candidate.calendar.events)) {
+      setMessage({ tone: "nogo", text: "Veld “calendar” (seizoenskalender) ontbreekt." });
+      return;
+    }
     const next: AppState = {
       version: candidate.version,
       weekends: candidate.weekends,
+      calendar: candidate.calendar,
       clockOverride: typeof candidate.clockOverride === "string" ? candidate.clockOverride : null,
     };
     dispatch({ type: "hydrate", state: next });
     setImportText("");
-    setMessage({ tone: "go", text: `Ingelezen: ${next.weekends.length} weekend(s).` });
+    setMessage({ tone: "go", text: `Ingelezen: ${next.weekends.length} weekend(s) en ${next.calendar.events.length} kalenderitems.` });
   }
 
   function resetToSeed() {

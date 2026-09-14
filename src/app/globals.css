@@ -267,3 +267,11 @@ a.card:hover, .card-hover:hover { box-shadow: 0 6px 20px -10px rgba(0,13,68,0.35
   .input { min-height: 40px; font-size: 0.95rem; }
   table.erp td { padding-block: 0.6rem; }
 }
+
+/* ---------- Seizoenskalender ---------- */
+.cal-cell { min-height: 58px; }
+@media (min-width: 640px) { .cal-cell { min-height: 72px; } }
+.cal-pill { display: block; }
+.drawer { animation: drawer-in 0.18s ease-out; }
+@keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .drawer { animation: none; } }

@@ -4,16 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarRange, History, LayoutDashboard, Menu, X, BookOpen, Settings2, Compass } from "lucide-react";
+import { CalendarRange, History, LayoutDashboard, Menu, X, BookOpen, Settings2, Compass, Trophy } from "lucide-react";
 import { useStore } from "@/store/store";
 import { formatDateTime } from "@/lib/engine";
 
 const NAV = [
   { href: "/", label: "Controlekamer", short: "Home", icon: LayoutDashboard, bottom: true },
   { href: "/intro", label: "Introductie", short: "Intro", icon: Compass, bottom: false },
+  { href: "/matches", label: "Wedstrijden", short: "Wedstrijden", icon: Trophy, bottom: true },
   { href: "/weekends", label: "Weekenden", short: "Weekenden", icon: CalendarRange, bottom: true },
   { href: "/history", label: "Geleerde lessen", short: "Lessen", icon: History, bottom: true },
-  { href: "/glossary", label: "Begrippen", short: "Begrippen", icon: BookOpen, bottom: true },
+  { href: "/glossary", label: "Begrippen", short: "Begrippen", icon: BookOpen, bottom: false },
   { href: "/settings", label: "Systeem", short: "Systeem", icon: Settings2, bottom: false },
 ];
 

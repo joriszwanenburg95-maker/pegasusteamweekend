@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
-import type { AppState, Weekend } from "@/lib/types";
+import type { AppState, SeasonCalendar, SeasonEvent, Weekend } from "@/lib/types";
 import { SEED_VERSION, seedState } from "@/data/seed";
 
 const STORAGE_KEY = "pegasus-teamweekend-erp-v1";
@@ -11,6 +11,9 @@ type Action =
   | { type: "upsertWeekend"; weekend: Weekend }
   | { type: "updateWeekend"; id: string; patch: (w: Weekend) => Weekend }
   | { type: "deleteWeekend"; id: string }
+  | { type: "updateCalendar"; patch: (c: SeasonCalendar) => SeasonCalendar }
+  | { type: "upsertEvent"; event: SeasonEvent }
+  | { type: "deleteEvent"; id: string }
   | { type: "setClock"; iso: string | null }
   | { type: "reset" };
 
@@ -33,7 +36,31 @@ function reducer(state: AppState, action: Action): AppState {
         weekends: state.weekends.map((w) => (w.id === action.id ? action.patch(w) : w)),
       };
     case "deleteWeekend":
-      return { ...state, weekends: state.weekends.filter((w) => w.id !== action.id) };
+      return {
+        ...state,
+        weekends: state.weekends.filter((w) => w.id !== action.id),
+        // Koppelingen naar een verwijderd weekend opruimen.
+        calendar: {
+          ...state.calendar,
+          events: state.calendar.events.map((e) => (e.weekendId === action.id ? { ...e, weekendId: null } : e)),
+        },
+      };
+    case "updateCalendar":
+      return { ...state, calendar: action.patch(state.calendar) };
+    case "upsertEvent": {
+      const exists = state.calendar.events.some((e) => e.id === action.event.id);
+      return {
+        ...state,
+        calendar: {
+          ...state.calendar,
+          events: exists
+            ? state.calendar.events.map((e) => (e.id === action.event.id ? action.event : e))
+            : [...state.calendar.events, action.event],
+        },
+      };
+    }
+    case "deleteEvent":
+      return { ...state, calendar: { ...state.calendar, events: state.calendar.events.filter((e) => e.id !== action.id) } };
     case "setClock":
       return { ...state, clockOverride: action.iso };
     case "reset":
@@ -49,6 +76,10 @@ interface StoreValue {
   dispatch: (a: Action) => void;
   updateWeekend: (id: string, patch: (w: Weekend) => Weekend) => void;
   getWeekend: (idOrSlug: string) => Weekend | undefined;
+  updateCalendar: (patch: (c: SeasonCalendar) => SeasonCalendar) => void;
+  upsertEvent: (event: SeasonEvent) => void;
+  updateEvent: (id: string, patch: Partial<SeasonEvent>) => void;
+  deleteEvent: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -63,7 +94,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as AppState;
-        if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.weekends)) {
+        if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.weekends) && parsed.calendar) {
           dispatch({ type: "hydrate", state: parsed });
         }
       }
@@ -97,12 +128,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (idOrSlug: string) => state.weekends.find((w) => w.id === idOrSlug || w.slug === idOrSlug),
     [state.weekends],
   );
+  const updateCalendar = useCallback(
+    (patch: (c: SeasonCalendar) => SeasonCalendar) => dispatch({ type: "updateCalendar", patch }),
+    [],
+  );
+  const upsertEvent = useCallback((event: SeasonEvent) => dispatch({ type: "upsertEvent", event }), []);
+  const updateEvent = useCallback(
+    (id: string, patch: Partial<SeasonEvent>) =>
+      dispatch({
+        type: "updateCalendar",
+        patch: (c) => ({ ...c, events: c.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) }),
+      }),
+    [],
+  );
+  const deleteEvent = useCallback((id: string) => dispatch({ type: "deleteEvent", id }), []);
 
   const now = state.clockOverride ?? new Date(tick).toISOString();
 
   const value = useMemo<StoreValue>(
-    () => ({ state, hydrated, now, dispatch, updateWeekend, getWeekend }),
-    [state, hydrated, now, updateWeekend, getWeekend],
+    () => ({ state, hydrated, now, dispatch, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent }),
+    [state, hydrated, now, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

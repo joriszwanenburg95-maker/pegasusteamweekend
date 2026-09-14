@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCurrentWeekend } from "@/store/useCurrentWeekend";
+import { useStore } from "@/store/store";
+import { Trophy } from "lucide-react";
 import type { Attendance, Weekend } from "@/lib/types";
 import {
   analyzeCriticalPath,
@@ -9,7 +11,12 @@ import {
   bobRiskIndex,
   estimateBzt,
   evaluateReadiness,
+  eventsForWeekend,
+  formatDateKey,
   formatDateTime,
+  formatEuro,
+  isMatch,
+  travelCost,
   formatDuration,
   groupSplitRisk,
   headcount,
@@ -29,6 +36,7 @@ import {
 import { CountUp, DotRow, Gauge } from "@/components/viz";
 import { nl } from "@/lib/labels";
 import { BOB_COPY, BobGauge } from "@/components/bob";
+import { DriverChip, KindBadge } from "@/components/calendar";
 
 type AttendanceKey = "match" | "weekend" | "overnight" | "sunday" | "dinner";
 
@@ -66,6 +74,8 @@ function Overview({ weekend: w, now }: { weekend: Weekend; now: string }) {
           {w.summary}
         </Callout>
       )}
+
+      <ProgrammeLink weekend={w} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[auto_auto_1fr] gap-3 items-stretch rise rise-1">
         <Card className="flex flex-col items-center justify-center py-4 px-5">
@@ -228,6 +238,53 @@ function Overview({ weekend: w, now }: { weekend: Weekend; now: string }) {
 
       {w.phase === "COMPLETED" && w.retrospective.filled && <RetrospectiveSummary weekend={w} />}
     </div>
+  );
+}
+
+/** Verband met het programma: de wedstrijd(en) en kalenderitems die aan dit weekend hangen. */
+function ProgrammeLink({ weekend: w }: { weekend: Weekend }) {
+  const { state } = useStore();
+  const cal = state.calendar;
+  const events = eventsForWeekend(cal, w.id);
+  if (events.length === 0) {
+    return (
+      <div className="text-[12px] text-faint flex items-center gap-1.5">
+        <Trophy size={12} /> Nog niet gekoppeld aan een wedstrijd in het{" "}
+        <Link href="/matches?view=schedule" className="text-cobalt font-semibold hover:underline">programma</Link>.
+      </div>
+    );
+  }
+  return (
+    <Card eyebrow={`Programma · ${cal.season}`} title="Uit de seizoenskalender" className="rise rise-1" actions={<Link href="/matches?view=schedule" className="btn btn-sm"><Trophy size={13} /> Programma</Link>}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {events.map((ev) => (
+          <Link key={ev.id} href={`/matches?view=schedule&event=${ev.id}`} className="rounded-[6px] border border-line px-3 py-2.5 hover:bg-sunken block">
+            <div className="flex flex-wrap items-center gap-2">
+              <KindBadge kind={ev.kind} isHome={isMatch(ev) ? ev.isHome : undefined} />
+              <span className="font-semibold text-navy text-sm">{ev.opponent ? `${ev.title} · ${ev.opponent}` : ev.title}</span>
+              <span className="erp-mono text-[11px] text-faint ml-auto">{formatDateKey(ev.date)}{ev.endDate && ` – ${formatDateKey(ev.endDate, { weekday: undefined })}`}</span>
+            </div>
+            {isMatch(ev) && (
+              <div className="erp-mono text-[11.5px] text-muted mt-1 flex flex-wrap gap-x-3">
+                {ev.startTime && <span>Aanvang {ev.startTime}</span>}
+                {ev.presentTime && <span>Aanwezig {ev.presentTime}</span>}
+                {ev.departArkTime && <span>Vertrek Ark {ev.departArkTime}</span>}
+                {ev.roundTripKm > 0 && <span>{ev.roundTripKm} km · {formatEuro(travelCost(ev, cal.kmRate))}</span>}
+                {ev.headcount > 0 && <span>{ev.headcount} mee</span>}
+              </div>
+            )}
+            {(ev.venue || ev.address) && <div className="text-[11.5px] text-muted mt-0.5">{[ev.venue, ev.address].filter(Boolean).join(", ")}</div>}
+            {ev.cars.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                {ev.cars.map((c, i) => <DriverChip key={`${c}${i}`} name={c} size="sm" />)}
+                {ev.carpool && <span className="text-[11px] text-faint ml-1">carpool {ev.carpool}</span>}
+                {ev.ownTransport && <span className="text-[11px] text-faint ml-1">zelf {ev.ownTransport}</span>}
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }
 

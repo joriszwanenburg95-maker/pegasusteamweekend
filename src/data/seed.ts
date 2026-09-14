@@ -1,11 +1,14 @@
 import type { AppState, Participant, Weekend } from "@/lib/types";
+import { SEASON_2026_2027 } from "./season";
 
 /**
  * Seeddata. Twee weekends:
- *  1. MAASEIK — historische case (COMPLETED). Alleen gedocumenteerde kenmerken;
- *     scores op basis van die kenmerken. Geen verzonnen feiten; datum indicatief.
- *  2. 3 OKTOBER 2026 — planningsweekend in PLANNING-fase met voorbeelddata,
- *     zodat de readiness gate iets te bewaken heeft. Vervang door echte gegevens.
+ *  1. MAASEIK (12-13 september 2026, jaarkalender) — historische case (COMPLETED).
+ *     Alleen gedocumenteerde kenmerken; scores op basis van die kenmerken.
+ *     Kamperen was al op 1 mei 2026 aangekondigd (opmerking Bob): accommodatie en
+ *     vervoersvorm waren op tijd bekend; eten, avond en headcount niet.
+ *  2. 3 OKTOBER 2026 — teamweekend na de uitwedstrijd tegen Sudosa (Assen, ronde 2).
+ *     Wedstrijd en rijschema uit het programma; accommodatie/eten/avond zijn voorbeelddata.
  *
  * Selectie: publieke Heren 1-pagina (seizoen 2025/26) + "Job" uit de
  * vervoersvoorbeelden. Werk bij voor 2026/2027.
@@ -52,27 +55,27 @@ function participants(
 /* MAASEIK                                                              */
 /* ------------------------------------------------------------------ */
 
-const maaseikDeparture = "2025-09-27T14:00:00.000Z";
+const maaseikDeparture = "2026-09-12T12:00:00.000Z"; // 14:00 lokale tijd, verzamelen Ark van Oost
 
 export const MAASEIK: Weekend = {
   id: "w-maaseik",
   slug: "maaseik",
   name: "Teamweekend Maaseik",
-  season: "2025/2026",
+  season: "2026/2027",
   city: "Maaseik (BE)",
   phase: "COMPLETED",
   historical: true,
   summary:
-    "Eerste historische case. Camping De Boomgaard, zeven tentplaatsen, twee man per tent, tenten en ontbijt zelf regelen. Avondprogramma kort voor vertrek nog niet definitief; lokale horeca 's avonds beperkt; restaurant bij late reservering vol. Chips van Rik gestolen; dader nooit officieel vastgesteld. Gezellig geworden. Datum indicatief.",
+    "Eerste historische case, 12-13 september 2026. Kamperen op Camping De Boomgaard was al op 1 mei aangekondigd (7+2 plekken, twee man per tent, tenten en ontbijt zelf regelen): accommodatie en vervoersvorm waren dus op tijd bekend. Wat wél laat kwam: eten, avondprogramma en de definitieve groepsgrootte. Lokale horeca 's avonds beperkt; restaurant bij late reservering vol. Chips van Rik gestolen; dader nooit officieel vastgesteld. Gezellig geworden. Een camping blijft een harde blocker op bedden.",
   departureAt: maaseikDeparture,
-  returnAt: "2025-09-28T16:00:00.000Z",
+  returnAt: "2026-09-13T14:00:00.000Z",
   match: {
     hasMatch: false,
     opponent: "—",
     venue: "Verzamelen Ark van Oost",
     city: "Nijmegen",
     matchStart: maaseikDeparture,
-    matchEnd: "2025-09-27T15:30:00.000Z", // aankomst camping (indicatief)
+    matchEnd: "2026-09-12T13:30:00.000Z", // aankomst camping (indicatief)
     isAway: true,
   },
   participants: participants(
@@ -96,7 +99,7 @@ export const MAASEIK: Weekend = {
     contact: "",
     travelFromVenueMin: 90,
     notes:
-      "Zeven tentplaatsen, twee personen per tent, maximaal circa 3 m² per tent. Tenten zelf regelen. Ontbijt zelf regelen. Campingtoegang was pas laat onderwerp van gesprek.",
+      "7+2 plekken gereserveerd, twee personen per tent, maximaal circa 3 m² per tent. Tenten en ontbijt zelf regelen. Kamperen is op 1 mei 2026 aangekondigd, ruim vier maanden vooraf: accommodatie en vervoersvorm waren op tijd bekend. Geen bed blijft wel geen bed.",
   },
   dinner: {
     known: true,
@@ -187,7 +190,7 @@ export const MAASEIK: Weekend = {
     {
       id: "v-derde",
       driverId: "p-joris",
-      name: "Derde auto (laat bepaald)",
+      name: "Derde auto (Joris)",
       nominalSeats: 4,
       availableSeats: 4,
       cargoSize: "medium",
@@ -197,15 +200,15 @@ export const MAASEIK: Weekend = {
     },
   ],
   checklist: [
-    { id: "c1", section: "beforeDeparture", label: "deelnemers vergrendeld", ownerId: "p-joris", status: "done", deadline: "2025-09-26T18:00:00.000Z" },
-    { id: "c2", section: "beforeDeparture", label: "restaurant bevestigd", ownerId: null, status: "blocked", deadline: "2025-09-26T18:00:00.000Z" },
-    { id: "c3", section: "beforeDeparture", label: "accommodatie bevestigd", ownerId: "p-joris", status: "done", deadline: "2025-09-20T18:00:00.000Z" },
-    { id: "c4", section: "beforeDeparture", label: "chauffeurs bevestigd", ownerId: "p-job", status: "done", deadline: "2025-09-26T18:00:00.000Z" },
-    { id: "c5", section: "beforeDeparture", label: "passagiers ingedeeld", ownerId: "p-job", status: "done", deadline: "2025-09-27T10:00:00.000Z" },
+    { id: "c1", section: "beforeDeparture", label: "deelnemers vergrendeld", ownerId: "p-joris", status: "done", deadline: "2026-09-11T18:00:00.000Z" },
+    { id: "c2", section: "beforeDeparture", label: "restaurant bevestigd", ownerId: null, status: "blocked", deadline: "2026-09-11T18:00:00.000Z" },
+    { id: "c3", section: "beforeDeparture", label: "accommodatie bevestigd (kamperen, aangekondigd 1 mei)", ownerId: "p-joris", status: "done", deadline: "2026-09-05T18:00:00.000Z" },
+    { id: "c4", section: "beforeDeparture", label: "chauffeurs bevestigd", ownerId: "p-job", status: "done", deadline: "2026-09-11T18:00:00.000Z" },
+    { id: "c5", section: "beforeDeparture", label: "passagiers ingedeeld", ownerId: "p-job", status: "done", deadline: "2026-09-12T08:00:00.000Z" },
     { id: "c6", section: "teamEquipment", label: "shirttas", ownerId: "p-pim", status: "na", deadline: null },
     { id: "c7", section: "teamEquipment", label: "ballen", ownerId: "p-pim", status: "na", deadline: null },
-    { id: "c8", section: "personal", label: "tent (2 pers., max ~3 m²)", ownerId: null, status: "done", deadline: "2025-09-27T10:00:00.000Z", conditional: true },
-    { id: "c9", section: "personal", label: "ontbijt zelf regelen", ownerId: null, status: "done", deadline: "2025-09-27T10:00:00.000Z", conditional: true },
+    { id: "c8", section: "personal", label: "tent (2 pers., max ~3 m²)", ownerId: null, status: "done", deadline: "2026-09-12T08:00:00.000Z", conditional: true },
+    { id: "c9", section: "personal", label: "ontbijt zelf regelen", ownerId: null, status: "done", deadline: "2026-09-12T08:00:00.000Z", conditional: true },
   ],
   criticalPath: [
     { id: "s1", label: "AANKOMST CAMPING", durationMin: 0, category: "logistics", optional: false },
@@ -218,11 +221,11 @@ export const MAASEIK: Weekend = {
     { id: "s8", label: "TAXI NAAR STAD (optioneel)", durationMin: 45, category: "logistics", optional: true, isTransfer: true, optimizationHint: "Een taxi naar een andere stad kost naar schatting 90 minuten team-BZT (heen en terug)." },
   ],
   decisions: [
-    { id: "d1", at: "2025-09-10T18:00:00.000Z", topic: "accommodation", summary: "Camping De Boomgaard vastgelegd; zeven tentplaatsen." },
-    { id: "d2", at: "2025-09-25T20:00:00.000Z", topic: "attendance", summary: "Definitieve groepsgrootte nog onduidelijk vlak voor reserveren." },
-    { id: "d3", at: "2025-09-26T21:00:00.000Z", topic: "transport", summary: "Autokeuze aangepast vanwege grote hoeveelheid kampeerspullen." },
-    { id: "d4", at: "2025-09-26T22:30:00.000Z", topic: "dinner", summary: "Eten, campingtoegang en benodigdheden pas nu onderwerp van gesprek." },
-    { id: "d5", at: "2025-09-27T12:00:00.000Z", topic: "nightlife", summary: "Avondprogramma kort voor vertrek nog niet definitief." },
+    { id: "d1", at: "2026-05-01T18:00:00.000Z", topic: "accommodation", summary: "Teamweekend met overnachting aangekondigd: kamperen, twee man per tent, 7+2 plekken gereserveerd op Camping De Boomgaard. Vervoersvorm en accommodatie hiermee ruim op tijd bekend." },
+    { id: "d2", at: "2026-09-09T19:00:00.000Z", topic: "transport", summary: "Drie auto's ingedeeld, met laadruimte voor de kampeerspullen (bekend sinds 1 mei)." },
+    { id: "d3", at: "2026-09-10T20:00:00.000Z", topic: "attendance", summary: "Definitieve groepsgrootte nog onduidelijk vlak voor reserveren." },
+    { id: "d4", at: "2026-09-11T20:30:00.000Z", topic: "dinner", summary: "Eten en benodigdheden pas nu onderwerp van gesprek." },
+    { id: "d5", at: "2026-09-12T10:00:00.000Z", topic: "nightlife", summary: "Avondprogramma kort voor vertrek nog niet definitief." },
   ],
   sunday: {
     relevant: true,
@@ -233,7 +236,7 @@ export const MAASEIK: Weekend = {
     confirmed: true,
   },
   headcountLockedAt: null,
-  planFinalAt: "2025-09-27T12:30:00.000Z",
+  planFinalAt: "2026-09-12T10:30:00.000Z",
   retrospective: {
     filled: true,
     outcome: {
@@ -246,13 +249,13 @@ export const MAASEIK: Weekend = {
       overall: 9,
     },
     operational: {
-      lastMinuteDecisions: 4,
-      unresolvedAtDeparture: 3,
+      lastMinuteDecisions: 2,
+      unresolvedAtDeparture: 2,
       unnecessaryTravelMin: 40,
       waitingMin: 40,
       groupSplits: 1,
       reservationIssues: 1,
-      transportIssues: 1,
+      transportIssues: 0,
       bztLossMin: 60,
       overrides: 1,
     },
@@ -263,7 +266,8 @@ export const MAASEIK: Weekend = {
       "Kampeerspullen halveren de effectieve autocapaciteit: reken met cargo, niet met stoelen.",
       "Beoordeel lokale horeca op sluitingstijd en groepscapaciteit, niet alleen op afstand.",
       "Een taxirit naar een andere stad is een BZT-verlies van ~90 minuten, niet een 'oplossing'.",
-      "Basiszaken (eten, toegang, benodigdheden) horen bij T-7D op tafel, niet bij T-24H.",
+      "Eten en benodigdheden horen bij T-7D op tafel, niet bij T-24H. Accommodatie en vervoersvorm stonden al sinds 1 mei; dat deel van de planning was op tijd.",
+      "Een camping blijft een harde blocker op bedden, ook als hij vier maanden vooruit is aangekondigd.",
       "De chips van Rik zijn gestolen. Onbewaakte teamsnacks verdwijnen: elk volgend weekend krijgt chipsbewaking een eigenaar op de checklist. Wie steelt, haalt de volgende ronde.",
     ],
   },
@@ -273,36 +277,37 @@ export const MAASEIK: Weekend = {
 /* 3 OKTOBER 2026 — planningsweekend (voorbeelddata)                    */
 /* ------------------------------------------------------------------ */
 
-const octDeparture = "2026-10-03T13:00:00.000Z"; // 15:00 lokale tijd, verzamelen Ark van Oost
+const octDeparture = "2026-10-03T14:15:00.000Z"; // 16:15 lokale tijd, vertrek Ark van Oost (rijschema)
 
 export const OCTOBER_2026: Weekend = {
   id: "w-2026-10-03",
   slug: "teamweekend-3-oktober-2026",
   name: "Teamweekend 3 oktober 2026",
   season: "2026/2027",
-  city: "Nog te bepalen",
+  city: "Assen",
   phase: "PLANNING",
   summary:
-    "Concept met voorbeelddata om de readiness gate te demonstreren. Tegenstander, stad en locaties volgen uit het Nevobo-programma 2026/2027; vervang de voorbeelden door echte gegevens.",
+    "Teamweekend na ronde 2: uitwedstrijd tegen Sudosa in Sporthal Olympus, Assen (aanvang 20:00). Rijschema: vertrek Ark 16:15, aanwezig 18:15, 336 km retour, 14 mee; auto's Wouter, Joris, Rik en Boaz, Henk en Senna carpoolen. Accommodatie, eten en avondprogramma zijn nog voorbeelddata.",
   departureAt: octDeparture,
   returnAt: "2026-10-04T15:00:00.000Z",
   match: {
     hasMatch: true,
-    opponent: "Uitwedstrijd (tegenstander volgt)",
-    venue: "Nog te bepalen",
-    city: "Nog te bepalen",
-    matchStart: "2026-10-03T15:00:00.000Z",
-    matchEnd: "2026-10-03T17:00:00.000Z",
+    opponent: "Sudosa",
+    venue: "Sporthal Olympus, Mr. Groen van Prinstererlaan 100",
+    city: "Assen",
+    matchStart: "2026-10-03T18:00:00.000Z",
+    matchEnd: "2026-10-03T20:00:00.000Z",
     isAway: true,
   },
   participants: participants({
-    "p-senna-m": { isDriver: true },
-    "p-job": { isDriver: true },
+    "p-wouter": { isDriver: true },
     "p-joris": { isDriver: true },
+    "p-rik": { isDriver: true },
+    "p-boaz": { isDriver: true },
+    "p-senna-m": { ownTransport: true }, // carpoolt met Henk (rijschema)
     "p-koen": { weekend: "unknown", overnight: "unknown", sunday: "unknown", dinner: "unknown" },
     "p-bob": { weekend: "notGoing", overnight: "notGoing", sunday: "notGoing", dinner: "notGoing" },
     "p-pepijn": { sunday: "notGoing" },
-    "p-dean": { ownTransport: true, overnight: "notGoing" },
   }),
   accommodation: {
     name: "Hostel (voorbeeld)",
@@ -324,12 +329,12 @@ export const OCTOBER_2026: Weekend = {
     address: "",
     reserved: true,
     reservedCount: 12,
-    time: "20:15",
+    time: "22:45",
     travelMin: 8,
-    durationMin: 90,
+    durationMin: 75,
     onCriticalPath: true,
     beerCanStartHere: true,
-    kitchenClosesAt: "21:30",
+    kitchenClosesAt: "23:30",
     fallback: "Pizzeria om de hoek (geen reservering)",
   },
   nightlife: [
@@ -341,7 +346,7 @@ export const OCTOBER_2026: Weekend = {
       distanceKm: 0.4,
       walkMin: 5,
       opensAt: "16:00",
-      closesAt: "22:00",
+      closesAt: "00:30",
       kitchenClosesAt: "",
       suitableLargeGroup: false,
       reservationNeeded: false,
@@ -354,7 +359,7 @@ export const OCTOBER_2026: Weekend = {
       transfers: 0,
       fallbackAvailable: false,
       isPrimary: true,
-      notes: "Vijf minuten lopen, maar sluit om 22:00. Niet automatisch goed.",
+      notes: "Vijf minuten lopen, maar sluit om 00:30: na een wedstrijd om 20:00 in Assen blijft er weinig BZT over. Niet automatisch goed.",
     },
     {
       id: "n-oct-stad",
@@ -399,25 +404,14 @@ export const OCTOBER_2026: Weekend = {
   ],
   vehicles: [
     {
-      id: "v-oct-volvo",
-      driverId: "p-senna-m",
-      name: "Senna's Volvo station",
-      nominalSeats: 5,
-      availableSeats: 5,
-      cargoSize: "large",
-      luggageLoad: "medium",
-      passengerIds: ["p-dicky", "p-wouter", "p-tom", "p-boaz"],
-      confirmed: true,
-    },
-    {
-      id: "v-oct-up",
-      driverId: "p-job",
-      name: "Job's Up",
+      id: "v-oct-wouter",
+      driverId: "p-wouter",
+      name: "Wouters auto",
       nominalSeats: 4,
       availableSeats: 4,
-      cargoSize: "small",
+      cargoSize: "medium",
       luggageLoad: "medium",
-      passengerIds: ["p-pim", "p-rik", "p-senna-r"],
+      passengerIds: ["p-dicky", "p-dean", "p-tom"],
       confirmed: true,
     },
     {
@@ -428,7 +422,29 @@ export const OCTOBER_2026: Weekend = {
       availableSeats: 4,
       cargoSize: "medium",
       luggageLoad: "medium",
-      passengerIds: ["p-pepijn"],
+      passengerIds: ["p-pepijn", "p-pim"],
+      confirmed: true,
+    },
+    {
+      id: "v-oct-rik",
+      driverId: "p-rik",
+      name: "Riks auto",
+      nominalSeats: 4,
+      availableSeats: 4,
+      cargoSize: "medium",
+      luggageLoad: "medium",
+      passengerIds: ["p-senna-r", "p-koen"],
+      confirmed: true,
+    },
+    {
+      id: "v-oct-boaz",
+      driverId: "p-boaz",
+      name: "Boaz' auto",
+      nominalSeats: 4,
+      availableSeats: 4,
+      cargoSize: "medium",
+      luggageLoad: "medium",
+      passengerIds: ["p-job"],
       confirmed: false,
     },
   ],
@@ -436,8 +452,8 @@ export const OCTOBER_2026: Weekend = {
     { id: "c1", section: "beforeDeparture", label: "deelnemers vergrendeld", ownerId: "p-joris", status: "open", deadline: "2026-09-26T18:00:00.000Z" },
     { id: "c2", section: "beforeDeparture", label: "restaurant bevestigd", ownerId: "p-joris", status: "done", deadline: "2026-09-30T18:00:00.000Z" },
     { id: "c3", section: "beforeDeparture", label: "accommodatie bevestigd", ownerId: "p-joris", status: "done", deadline: "2026-09-19T18:00:00.000Z" },
-    { id: "c4", section: "beforeDeparture", label: "chauffeurs bevestigd", ownerId: "p-senna-m", status: "inProgress", deadline: "2026-09-30T18:00:00.000Z" },
-    { id: "c5", section: "beforeDeparture", label: "passagiers ingedeeld", ownerId: "p-senna-m", status: "open", deadline: "2026-10-02T18:00:00.000Z" },
+    { id: "c4", section: "beforeDeparture", label: "chauffeurs bevestigd (rijschema)", ownerId: "p-joris", status: "done", deadline: "2026-09-30T18:00:00.000Z" },
+    { id: "c5", section: "beforeDeparture", label: "passagiers ingedeeld", ownerId: "p-joris", status: "inProgress", deadline: "2026-10-02T18:00:00.000Z" },
     { id: "c6", section: "beforeDeparture", label: "avondlocatie haalbaar", ownerId: null, status: "blocked", deadline: "2026-09-30T18:00:00.000Z" },
     { id: "c7", section: "access", label: "toegangscode / instructie hostel", ownerId: "p-joris", status: "open", deadline: "2026-10-02T12:00:00.000Z" },
     { id: "c8", section: "teamEquipment", label: "shirttas", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
@@ -457,8 +473,9 @@ export const OCTOBER_2026: Weekend = {
     { id: "s9", label: "EERSTE BIER", durationMin: 90, category: "bzt", optional: false },
   ],
   decisions: [
-    { id: "d1", at: "2026-09-08T19:00:00.000Z", topic: "accommodation", summary: "Hostel geboekt voor 14 bedden." },
-    { id: "d2", at: "2026-09-12T20:00:00.000Z", topic: "dinner", summary: "Eetcafé gereserveerd voor 12 personen om 20:15." },
+    { id: "d1", at: "2026-09-08T19:00:00.000Z", topic: "accommodation", summary: "Hostel geboekt voor 14 bedden (voorbeeld)." },
+    { id: "d2", at: "2026-09-12T20:00:00.000Z", topic: "dinner", summary: "Eetcafé gereserveerd voor 12 personen om 22:45, na de wedstrijd (voorbeeld)." },
+    { id: "d3", at: "2026-09-14T12:00:00.000Z", topic: "transport", summary: "Rijschema overgenomen uit het programma: Wouter, Joris, Rik en Boaz rijden; Henk en Senna carpoolen; vertrek Ark 16:15." },
   ],
   sunday: {
     relevant: true,
@@ -561,12 +578,13 @@ export function blankWeekend(id: string, name: string, departureAt: string): Wee
   };
 }
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 export function seedState(): AppState {
   return {
     version: SEED_VERSION,
     weekends: [OCTOBER_2026, MAASEIK],
+    calendar: structuredClone(SEASON_2026_2027),
     clockOverride: null,
   };
 }

@@ -99,6 +99,16 @@ const LABELS: Record<string, string> = {
   walk: "Lopen",
   car: "Auto",
   taxi: "Taxi",
+  // Seizoenskalender
+  competition: "Competitie",
+  cup: "Beker",
+  friendly: "Oefenwedstrijd",
+  tournament: "Toernooi",
+  playoff: "P/D-wedstrijden",
+  reserve: "Reservedatum",
+  teamweekend: "Teamweekend",
+  meeting: "Teambespreking",
+  holiday: "Vrij / vakantie",
 };
 
 /** Vertaal een interne code naar een Nederlands label; onbekende codes komen ongewijzigd terug. */

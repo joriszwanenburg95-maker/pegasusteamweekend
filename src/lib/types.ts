@@ -275,9 +275,106 @@ export interface Weekend {
   summary?: string;
 }
 
+/* ------------------------------------------------------------------ */
+/* Seizoenskalender & rijschema                                         */
+/* ------------------------------------------------------------------ */
+
+export type SeasonEventKind =
+  | "competition"
+  | "cup"
+  | "friendly"
+  | "tournament"
+  | "playoff"
+  | "reserve"
+  | "teamweekend"
+  | "meeting"
+  | "holiday"
+  | "other";
+
+export const SEASON_EVENT_KINDS: SeasonEventKind[] = [
+  "competition",
+  "cup",
+  "friendly",
+  "tournament",
+  "playoff",
+  "reserve",
+  "teamweekend",
+  "meeting",
+  "holiday",
+  "other",
+];
+
+/** Wedstrijdsoorten: alles wat in het rijschema hoort. */
+export const MATCH_KINDS: SeasonEventKind[] = ["competition", "cup", "friendly", "tournament", "playoff"];
+
+/**
+ * Eén regel uit de jaarkalender / het rijschema. Datums zijn lokale
+ * kalenderdatums ("YYYY-MM-DD"), tijden "HH:MM"; leeg = onbekend.
+ */
+export interface SeasonEvent {
+  id: string;
+  date: string;
+  /** Laatste dag bij meerdaagse items (teamweekend, vakantie). Leeg = ééndaags. */
+  endDate: string;
+  kind: SeasonEventKind;
+  /** "Ronde 1", "Beker ronde 2", "Karnaval" … */
+  title: string;
+  opponent: string;
+  isHome: boolean;
+  venue: string;
+  address: string;
+  /** Aanvang wedstrijd. */
+  startTime: string;
+  /** Aanwezig in de hal. */
+  presentTime: string;
+  /** Vertrek vanaf Ark van Oost. */
+  departArkTime: string;
+  /** Kilometers heen en terug (rijschema); 0 = onbekend. */
+  roundTripKm: number;
+  /** Aantal mee volgens rijschema; 0 = onbekend. */
+  headcount: number;
+  /** Chauffeurs (voornamen), één per auto. */
+  cars: string[];
+  /** Wie rijden samen buiten het teamvervoer ("Henk + Senna"). */
+  carpool: string;
+  /** Wie regelt zelf vervoer. */
+  ownTransport: string;
+  /** Op deze dag(en) vervalt de training. */
+  cancelsTraining: boolean;
+  /** Gekoppeld teamweekend (Weekend.id) — het verband tussen programma en weekend. */
+  weekendId: string | null;
+  notes: string;
+}
+
+export interface TrainingSlot {
+  id: string;
+  /** 1 = maandag … 7 = zondag (ISO). */
+  weekday: number;
+  from: string;
+  to: string;
+  location: string;
+  note: string;
+}
+
+export interface SeasonCalendar {
+  season: string; // "2026/2027"
+  /** Eerste en laatste dag waarop het trainingsrooster geldt. */
+  startDate: string;
+  endDate: string;
+  homeVenue: string;
+  homeAddress: string;
+  /** Vaste aanvang thuiswedstrijden. */
+  homeMatchTime: string;
+  /** Kilometervergoeding per km (WBW). */
+  kmRate: number;
+  trainingSlots: TrainingSlot[];
+  events: SeasonEvent[];
+}
+
 export interface AppState {
   version: number;
   weekends: Weekend[];
+  calendar: SeasonCalendar;
   /** Simulatie-"nu" voor demo/tests; null = echte klok. */
   clockOverride: string | null;
 }

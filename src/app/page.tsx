@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, BookOpenCheck, ShieldCheck } from "lucide-react";
+import { ArrowRight, BookOpenCheck, ShieldCheck, Tent, Trophy } from "lucide-react";
 import { useStore } from "@/store/store";
-import type { Weekend } from "@/lib/types";
+import type { SeasonCalendar, Weekend } from "@/lib/types";
 import {
   analyzeCriticalPath,
   bobRiskIndex,
@@ -12,6 +12,10 @@ import {
   estimateBzt,
   evaluateReadiness,
   formatDate,
+  formatDateKey,
+  formatEuro,
+  travelCost,
+  upcomingMatches,
   formatDateTime,
   formatDuration,
   formatHours,
@@ -36,6 +40,7 @@ import {
 } from "@/components/ui";
 import { CountUp, Gauge, StackedBar, TimeWindowBar, type Segment, type TimeSpan } from "@/components/viz";
 import { BobAlarm, BobAvatar, BobGauge } from "@/components/bob";
+import { DriverChip, KindBadge } from "@/components/calendar";
 import { nl } from "@/lib/labels";
 
 /** Toon voor de Bob-aanlooptijd-kwalificatie uit de engine. */
@@ -148,6 +153,8 @@ export default function ControlRoomPage() {
           sub="Beleving, los van het proces"
         />
       </div>
+
+      <ProgrammeStrip cal={state.calendar} weekends={state.weekends} now={now} />
 
       <ReadinessBoard weekends={open} now={now} />
 
@@ -334,6 +341,62 @@ function EveningBar({ weekend }: { weekend: Weekend }) {
         {path.minutesToFirstBeer !== null && ` · ${formatDuration(path.minutesToFirstBeer)} van ${weekend.match.hasMatch ? "einde wedstrijd" : "aankomst"} tot eerste bier`}
       </div>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/** Eerstvolgende wedstrijden uit het programma, met het verband naar een teamweekend. */
+function ProgrammeStrip({ cal, weekends, now }: { cal: SeasonCalendar; weekends: Weekend[]; now: string }) {
+  const list = upcomingMatches(cal, now, 5);
+  return (
+    <Card
+      eyebrow={`Programma · ${cal.season}`}
+      title="Eerstvolgende wedstrijden"
+      className="rise rise-3"
+      actions={
+        <Link href="/matches" className="btn btn-sm">
+          <Trophy size={13} /> Programma
+        </Link>
+      }
+    >
+      {list.length === 0 ? (
+        <div className="text-sm text-muted">Geen wedstrijden meer in het programma.</div>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {list.map((ev, i) => {
+            const wk = ev.weekendId ? weekends.find((w) => w.id === ev.weekendId) : undefined;
+            return (
+              <div key={ev.id} className={`shrink-0 w-[210px] rounded-[6px] border px-3 py-2.5 ${i === 0 ? "border-navy bg-navy text-white" : "border-line"}`}>
+                <div className={`erp-mono text-[11px] ${i === 0 ? "text-white/65" : "text-faint"}`}>
+                  {formatDateKey(ev.date)}
+                  {ev.startTime && ` · ${ev.startTime}`}
+                </div>
+                <div className="font-bold text-sm truncate mt-0.5">{ev.opponent || ev.title}</div>
+                <div className={`text-[11px] mt-0.5 truncate ${i === 0 ? "text-white/70" : "text-muted"}`}>
+                  {ev.isHome ? `Thuis · ${cal.homeVenue}` : ev.venue ? `Uit · ${ev.venue}` : "Uit · locatie onbekend"}
+                  {!ev.isHome && ev.departArkTime && ` · vertrek ${ev.departArkTime}`}
+                </div>
+                <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                  {i !== 0 && <KindBadge kind={ev.kind} isHome={ev.isHome} />}
+                  {ev.cars.slice(0, 4).map((c, j) => <DriverChip key={`${c}${j}`} name={c} size="sm" />)}
+                </div>
+                {!ev.isHome && ev.roundTripKm > 0 && (
+                  <div className={`erp-mono text-[10.5px] mt-1 ${i === 0 ? "text-white/60" : "text-faint"}`}>
+                    {ev.roundTripKm} km · {formatEuro(travelCost(ev, cal.kmRate))}
+                  </div>
+                )}
+                {wk && (
+                  <Link href={`/weekends/${wk.slug}`} className={`inline-flex items-center gap-1 text-[11.5px] font-semibold mt-1.5 hover:underline ${i === 0 ? "text-sky" : "text-cobalt"}`}>
+                    <Tent size={11} /> {wk.name}
+                  </Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
 
