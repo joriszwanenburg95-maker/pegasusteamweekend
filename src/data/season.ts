@@ -31,6 +31,7 @@ function ev(p: Partial_): SeasonEvent {
     ownTransport: "",
     cancelsTraining: false,
     weekendId: null,
+    shirtBagMemberId: "",
     notes: "",
     ...p,
   };
@@ -306,4 +307,6 @@ export const SEASON_2026_2027: SeasonCalendar = {
     { id: "t-wo", weekday: 3, from: "20:30", to: "23:00", location: HOME_VENUE, note: "ovb" },
   ],
   events: SEASON_EVENTS,
+  // Dean (#1) is aan de beurt voor de eerstvolgende wedstrijd; daarna op rugnummer door.
+  shirtBag: { memberId: "p-dean", fromDate: "2026-09-14" },
 };

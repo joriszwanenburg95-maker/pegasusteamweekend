@@ -276,6 +276,26 @@ export interface Weekend {
 }
 
 /* ------------------------------------------------------------------ */
+/* Selectie                                                             */
+/* ------------------------------------------------------------------ */
+
+export type TeamRole = "player" | "trainer" | "assistant";
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  /** Bijnaam zoals het team hem noemt ("Matta", "Pep", "Smeets"); "" = voornaam gebruiken. */
+  nickname: string;
+  /** Rugnummer; null = nog onbekend. */
+  number: number | null;
+  /** Positiecode: SV, PL, MID, DIA, LIB (vrij tekstveld). */
+  position: string;
+  role: TeamRole;
+  /** false = niet meer in de selectie, blijft wel in oude weekenden staan. */
+  active: boolean;
+}
+
+/* ------------------------------------------------------------------ */
 /* Seizoenskalender & rijschema                                         */
 /* ------------------------------------------------------------------ */
 
@@ -343,7 +363,15 @@ export interface SeasonEvent {
   cancelsTraining: boolean;
   /** Gekoppeld teamweekend (Weekend.id) — het verband tussen programma en weekend. */
   weekendId: string | null;
+  /** Handmatige afwijking van het shirttas-rooster (TeamMember.id); "" = volgens rooster. */
+  shirtBagMemberId: string;
   notes: string;
+}
+
+/** Shirttas-rooster: op rugnummer, beginnend bij `memberId` voor de eerste wedstrijd op/na `fromDate`. */
+export interface ShirtBagRotation {
+  memberId: string;
+  fromDate: string;
 }
 
 export interface TrainingSlot {
@@ -369,11 +397,13 @@ export interface SeasonCalendar {
   kmRate: number;
   trainingSlots: TrainingSlot[];
   events: SeasonEvent[];
+  shirtBag: ShirtBagRotation;
 }
 
 export interface AppState {
   version: number;
   weekends: Weekend[];
+  team: TeamMember[];
   calendar: SeasonCalendar;
   /** Simulatie-"nu" voor demo/tests; null = echte klok. */
   clockOverride: string | null;

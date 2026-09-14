@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CalendarDays, Car, ChevronRight, Link2, Plus, Settings2, Table2, Tent, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarDays, Car, ChevronRight, Link2, Plus, Settings2, Shirt, Table2, Tent, Trash2, Users, X } from "lucide-react";
 import { newId, useStore } from "@/store/store";
 import { blankWeekend } from "@/data/seed";
-import { SEASON_EVENT_KINDS, type SeasonCalendar, type SeasonEvent, type SeasonEventKind, type TrainingSlot, type Weekend } from "@/lib/types";
+import { shortName } from "@/data/team";
+import { SEASON_EVENT_KINDS, type SeasonCalendar, type SeasonEvent, type SeasonEventKind, type TeamMember, type TeamRole, type TrainingSlot, type Weekend } from "@/lib/types";
 import {
   applyEventToWeekend,
   blankEvent,
@@ -20,8 +21,14 @@ import {
   isoToDateKey,
   knownDriverNames,
   matches,
+  memberLabel,
   monthGrid,
   nextMatch,
+  nextShirtBag,
+  players,
+  rotationOrder,
+  shirtBagFor,
+  shirtBagSchedule,
   seasonMonths,
   seasonStats,
   trainingsOn,
@@ -34,11 +41,12 @@ import { CountUp } from "@/components/viz";
 import { DriverChip, EventPill, KIND_STYLE, KindBadge, driverColor, eventFullLabel } from "@/components/calendar";
 import { nl } from "@/lib/labels";
 
-type View = "calendar" | "schedule" | "settings";
+type View = "calendar" | "schedule" | "team" | "settings";
 
 const VIEWS: { key: View; label: string; icon: ReactNode }[] = [
   { key: "calendar", label: "Kalender", icon: <CalendarDays size={14} /> },
   { key: "schedule", label: "Rijschema", icon: <Table2 size={14} /> },
+  { key: "team", label: "Selectie & shirttas", icon: <Users size={14} /> },
   { key: "settings", label: "Rooster & instellingen", icon: <Settings2 size={14} /> },
 ];
 
@@ -53,8 +61,6 @@ const WEEKDAY_OPTIONS = [
   { value: "7", label: "Zondag" },
 ];
 
-/** Roostervoornamen voor de chauffeursuggesties (rijschema gebruikt voornamen). */
-const ROSTER_FIRST_NAMES = ["Dicky", "Dean", "Wouter", "Senna", "Tom", "Koen", "Boaz", "Joris", "Pep", "Rik", "Pim", "Job", "Henk", "Matta"];
 
 export default function MatchesPage() {
   return (
@@ -65,7 +71,8 @@ export default function MatchesPage() {
 }
 
 function MatchesInner() {
-  const { state, now, upsertEvent, updateEvent, deleteEvent, updateCalendar, updateWeekend } = useStore();
+  const { state, now, upsertEvent, updateEvent, deleteEvent, updateCalendar, updateWeekend, updateTeam } = useStore();
+  const team = state.team;
   const router = useRouter();
   const params = useSearchParams();
   const cal = state.calendar;
@@ -135,7 +142,7 @@ function MatchesInner() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 rise rise-1">
-        <NextMatchKpi next={next} cal={cal} onOpen={() => next && setEditingId(next.id)} />
+        <NextMatchKpi next={next} cal={cal} team={team} onOpen={() => next && setEditingId(next.id)} />
         <Kpi label="Competitie" value={<CountUp value={stats.competition} />} unit="rondes" sub={`${stats.competitionHome} thuis · ${stats.competitionAway} uit`} />
         <Kpi label="Beker" value={<CountUp value={stats.cup} />} unit="rondes" sub="Indien nog in de beker" />
         <Kpi label="Kilometers uit" value={<CountUp value={stats.totalKm} />} unit="km" sub={`${formatEuro(stats.totalCost)} via WBW (${formatEuro(cal.kmRate)}/km)`} />
@@ -169,7 +176,8 @@ function MatchesInner() {
       {view === "calendar" && (
         <CalendarView cal={cal} today={today} onDay={(k) => setDayKey(k)} onEvent={(id) => setEditingId(id)} />
       )}
-      {view === "schedule" && <ScheduleView cal={cal} weekends={state.weekends} today={today} onEvent={(id) => setEditingId(id)} />}
+      {view === "schedule" && <ScheduleView cal={cal} team={team} weekends={state.weekends} today={today} onEvent={(id) => setEditingId(id)} />}
+      {view === "team" && <TeamView cal={cal} team={team} now={now} updateTeam={updateTeam} updateCalendar={updateCalendar} onEvent={(id) => setEditingId(id)} />}
       {view === "settings" && <SettingsView cal={cal} update={updateCalendar} />}
 
       {dayKey && (
@@ -183,6 +191,7 @@ function MatchesInner() {
           <EventEditor
             ev={editing}
             cal={cal}
+            team={team}
             weekends={state.weekends}
             onChange={(patch) => updateEvent(editing.id, patch)}
             onDelete={() => {
@@ -203,7 +212,8 @@ function MatchesInner() {
 /* KPI: volgende wedstrijd                                              */
 /* ------------------------------------------------------------------ */
 
-function NextMatchKpi({ next, cal, onOpen }: { next: SeasonEvent | null; cal: SeasonCalendar; onOpen: () => void }) {
+function NextMatchKpi({ next, cal, team, onOpen }: { next: SeasonEvent | null; cal: SeasonCalendar; team: TeamMember[]; onOpen: () => void }) {
+  const bag = next ? shirtBagFor(cal, team, next.id) : null;
   if (!next) return <Kpi label="Volgende wedstrijd" value="—" sub="Geen wedstrijd meer in het programma" className="col-span-2" />;
   return (
     <button type="button" onClick={onOpen} className="card-navy stripe px-4 py-3 text-left col-span-2 hover:brightness-110">
@@ -218,9 +228,14 @@ function NextMatchKpi({ next, cal, onOpen }: { next: SeasonEvent | null; cal: Se
         {!next.isHome && next.roundTripKm > 0 && <span>{next.roundTripKm} km · {formatEuro(travelCost(next, cal.kmRate))}</span>}
         {next.isHome && <span>{cal.homeVenue}</span>}
       </div>
-      {next.cars.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+      {(next.cars.length > 0 || bag) && (
+        <div className="flex flex-wrap items-center gap-1 mt-2">
           {next.cars.map((c) => <DriverChip key={c} name={c} size="sm" />)}
+          {bag && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-white/80 ml-1">
+              <Shirt size={12} /> shirttas {memberLabel(bag.member)}
+            </span>
+          )}
         </div>
       )}
     </button>
@@ -386,8 +401,9 @@ function DayPanel({ cal, dateKey, onEvent, onCreate }: { cal: SeasonCalendar; da
 /* Rijschema                                                            */
 /* ------------------------------------------------------------------ */
 
-function ScheduleView({ cal, weekends, today, onEvent }: { cal: SeasonCalendar; weekends: Weekend[]; today: string; onEvent: (id: string) => void }) {
+function ScheduleView({ cal, team, weekends, today, onEvent }: { cal: SeasonCalendar; team: TeamMember[]; weekends: Weekend[]; today: string; onEvent: (id: string) => void }) {
   const rows = useMemo(() => matches(cal), [cal]);
+  const bags = useMemo(() => new Map(shirtBagSchedule(cal, team).map((a) => [a.event.id, a])), [cal, team]);
   const tally = useMemo(() => driverTally(cal), [cal]);
   const maxTally = tally[0]?.count ?? 1;
   const warnings = rows.flatMap((ev) => eventWarnings(ev).map((w) => ({ ev, w })));
@@ -397,7 +413,7 @@ function ScheduleView({ cal, weekends, today, onEvent }: { cal: SeasonCalendar; 
     <div className="space-y-3 rise rise-3">
       <Card eyebrow={`KM × ${formatEuro(cal.kmRate)} · bedragen via WBW`} title="Rijschema uitwedstrijden" padded={false}>
         <div className="overflow-x-auto">
-          <table className="erp min-w-[1100px]">
+          <table className="erp min-w-[1250px]">
             <thead>
               <tr>
                 <th>Datum</th>
@@ -412,6 +428,7 @@ function ScheduleView({ cal, weekends, today, onEvent }: { cal: SeasonCalendar; 
                 <th>Auto&apos;s</th>
                 <th>Carpool</th>
                 <th>Zelf</th>
+                <th>Shirttas</th>
                 <th>Weekend</th>
                 <th />
               </tr>
@@ -458,7 +475,7 @@ function ScheduleView({ cal, weekends, today, onEvent }: { cal: SeasonCalendar; 
                     <td className="erp-mono text-right">{ev.roundTripKm > 0 ? ev.roundTripKm : "—"}</td>
                     <td className="erp-mono text-right whitespace-nowrap">{ev.roundTripKm > 0 ? formatEuro(travelCost(ev, cal.kmRate)) : "—"}</td>
                     <td className="erp-mono text-right">{ev.headcount > 0 ? ev.headcount : "—"}</td>
-                    <td>
+                    <td className="min-w-[190px]">
                       <div className="flex flex-wrap gap-1">
                         {ev.cars.filter((c) => c.trim()).map((c, i) => <DriverChip key={`${c}${i}`} name={c} size="sm" title={`Auto ${i + 1}: ${c}`} />)}
                         {ev.cars.filter((c) => c.trim()).length === 0 && <span className="text-faint">—</span>}
@@ -466,6 +483,19 @@ function ScheduleView({ cal, weekends, today, onEvent }: { cal: SeasonCalendar; 
                     </td>
                     <td className="whitespace-nowrap">{ev.carpool || <span className="text-faint">—</span>}</td>
                     <td className="whitespace-nowrap">{ev.ownTransport || <span className="text-faint">—</span>}</td>
+                    <td className="whitespace-nowrap">
+                      {(() => {
+                        const a = bags.get(ev.id);
+                        if (!a || !a.member) return <span className="text-faint">—</span>;
+                        return (
+                          <span className="inline-flex items-center gap-1.5" title={a.override ? "Handmatig afwijkend van het rooster" : "Volgens rooster (op rugnummer)"}>
+                            <span className="erp-mono text-[11px] text-faint">{a.member.number !== null ? `#${a.member.number}` : "#?"}</span>
+                            <span className="font-semibold text-navy">{shortName(a.member)}</span>
+                            {a.override && <Badge tone="warn">afw.</Badge>}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="whitespace-nowrap">
                       {wk ? (
                         <Link href={`/weekends/${wk.slug}`} className="inline-flex items-center gap-1 text-cobalt font-semibold hover:underline text-[12px]">
@@ -641,12 +671,215 @@ function SettingsView({ cal, update }: { cal: SeasonCalendar; update: (p: (c: Se
 }
 
 /* ------------------------------------------------------------------ */
+/* Selectie & shirttas                                                  */
+/* ------------------------------------------------------------------ */
+
+const ROLE_OPTIONS: { value: TeamRole; label: string }[] = [
+  { value: "player", label: "Speler" },
+  { value: "trainer", label: "Trainer" },
+  { value: "assistant", label: "Assistent" },
+];
+const POSITION_OPTIONS = ["", "SV", "PL", "MID", "DIA", "LIB"].map((p) => ({ value: p, label: p ? `${p} · ${nl(p)}` : "—" }));
+
+function TeamView({
+  cal,
+  team,
+  now,
+  updateTeam,
+  updateCalendar,
+  onEvent,
+}: {
+  cal: SeasonCalendar;
+  team: TeamMember[];
+  now: string;
+  updateTeam: (p: (t: TeamMember[]) => TeamMember[]) => void;
+  updateCalendar: (p: (c: SeasonCalendar) => SeasonCalendar) => void;
+  onEvent: (id: string) => void;
+}) {
+  const setMember = (id: string, patch: Partial<TeamMember>) => updateTeam((t) => t.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const order = rotationOrder(team);
+  const schedule = shirtBagSchedule(cal, team);
+  const next = nextShirtBag(cal, team, now);
+  const today = isoToDateKey(now);
+  const activePlayers = players(team);
+  const staff = team.filter((m) => m.role !== "player" && m.active);
+  const inactive = team.filter((m) => !m.active);
+  const sorted = [...team].sort((a, b) => {
+    const ra = a.role === "player" ? 0 : 1;
+    const rb = b.role === "player" ? 0 : 1;
+    if (ra !== rb) return ra - rb;
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    if (a.number !== null && b.number !== null) return a.number - b.number;
+    if (a.number !== null) return -1;
+    if (b.number !== null) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  const missingNumbers = activePlayers.filter((m) => m.number === null);
+
+  return (
+    <div className="space-y-3 rise rise-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="Spelers" value={<CountUp value={activePlayers.length} />} sub={`${staff.length} staf · ${inactive.length} uit de selectie`} />
+        <Kpi label="Rugnummer onbekend" value={<CountUp value={missingNumbers.length} />} tone={missingNumbers.length > 0 ? "warn" : "go"} sub={missingNumbers.length > 0 ? missingNumbers.map(shortName).join(", ") : "Alles ingevuld"} />
+        <div className="card-navy stripe px-4 py-3 col-span-2">
+          <div className="erp-label flex items-center gap-1.5"><Shirt size={12} /> Shirttas · nu aan de beurt</div>
+          {next && next.member ? (
+            <>
+              <div className="text-lg font-extrabold tracking-tight mt-0.5">{memberLabel(next.member)}</div>
+              <div className="text-[11.5px] text-white/70 mt-0.5">
+                {formatDateKey(next.event.date)} · {eventFullLabel(next.event)}{next.override && " · handmatig"}
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-white/70 mt-1">Geen wedstrijd in het rooster.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-3">
+        <Card
+          eyebrow={`Pegasus Heren 1 · ${cal.season}`}
+          title="Selectie"
+          padded={false}
+          actions={
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => updateTeam((t) => [...t, { id: newId("p"), name: "", nickname: "", number: null, position: "", role: "player", active: true }])}
+            >
+              <Plus size={12} /> Teamlid
+            </button>
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="erp min-w-[760px]">
+              <thead>
+                <tr>
+                  <th className="w-[72px]">Nr</th>
+                  <th>Naam</th>
+                  <th>Bijnaam</th>
+                  <th>Positie</th>
+                  <th>Rol</th>
+                  <th>Actief</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((m) => (
+                  <tr key={m.id} className={m.active ? "" : "opacity-50"}>
+                    <td>
+                      {m.role === "player" ? (
+                        <input
+                          className="input erp-mono w-[64px]"
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={m.number ?? ""}
+                          placeholder="?"
+                          onChange={(e) => setMember(m.id, { number: e.target.value === "" ? null : Number(e.target.value) })}
+                        />
+                      ) : (
+                        <span className="text-faint">—</span>
+                      )}
+                    </td>
+                    <td><input className="input min-w-[150px]" value={m.name} placeholder="Naam" onChange={(e) => setMember(m.id, { name: e.target.value })} /></td>
+                    <td><input className="input w-[110px]" value={m.nickname} placeholder={m.name.split(" ")[0] || "—"} onChange={(e) => setMember(m.id, { nickname: e.target.value })} /></td>
+                    <td>
+                      {m.role === "player" ? (
+                        <Select value={m.position} onChange={(v) => setMember(m.id, { position: v })} options={POSITION_OPTIONS} />
+                      ) : (
+                        <span className="text-faint">—</span>
+                      )}
+                    </td>
+                    <td><Select value={m.role} onChange={(v) => setMember(m.id, { role: v })} options={ROLE_OPTIONS} /></td>
+                    <td><Checkbox checked={m.active} onChange={(v) => setMember(m.id, { active: v })} /></td>
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        aria-label="Verwijder"
+                        onClick={() => {
+                          if (!window.confirm(`${m.name || "Dit teamlid"} definitief verwijderen? Zet liever “actief” uit als hij nog in oude weekenden voorkomt.`)) return;
+                          updateTeam((t) => t.filter((x) => x.id !== m.id));
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2.5 text-[11.5px] text-faint border-t border-line">
+            Nieuwe weekenden nemen de actieve selectie als deelnemerslijst. Bestaande weekenden veranderen niet mee.
+          </div>
+        </Card>
+
+        <div className="space-y-3">
+          <Card eyebrow="Rooster" title="Shirttas op rugnummer">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Aan de beurt" hint="Voor de eerste wedstrijd op of na de datum">
+                <Select
+                  value={cal.shirtBag.memberId}
+                  onChange={(v) => updateCalendar((c) => ({ ...c, shirtBag: { ...c.shirtBag, memberId: v } }))}
+                  options={order.map((m) => ({ value: m.id, label: memberLabel(m) }))}
+                />
+              </Field>
+              <Field label="Vanaf">
+                <input className="input erp-mono" type="date" value={cal.shirtBag.fromDate} onChange={(e) => updateCalendar((c) => ({ ...c, shirtBag: { ...c.shirtBag, fromDate: e.target.value } }))} />
+              </Field>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-3">
+              {order.map((m, i) => (
+                <span key={m.id} className={`inline-flex items-center gap-1 rounded-[4px] border px-1.5 py-0.5 text-[11px] font-semibold ${m.id === cal.shirtBag.memberId ? "bg-navy text-white border-navy" : "border-line bg-sunken text-navy"}`}>
+                  <span className="erp-mono opacity-70">{m.number !== null ? m.number : "?"}</span>
+                  {shortName(m)}
+                  {i < order.length - 1 && <ChevronRight size={10} className="opacity-50" />}
+                </span>
+              ))}
+            </div>
+            <div className="text-[11.5px] text-faint mt-3 pt-2 border-t border-line">
+              Oplopend op rugnummer; spelers zonder nummer sluiten de rij. Een afwijking op één wedstrijd (in de editor) schuift het rooster niet op.
+            </div>
+          </Card>
+
+          <Card eyebrow="Per wedstrijd" title="Wie neemt de shirttas mee" padded={false}>
+            <div className="max-h-[420px] overflow-y-auto divide-y divide-line">
+              {schedule.map((a) => {
+                const past = a.event.date < today;
+                return (
+                  <button key={a.event.id} type="button" onClick={() => onEvent(a.event.id)} className={`w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-sunken ${past ? "opacity-50" : ""}`}>
+                    <span className="erp-mono text-[11px] text-faint w-[64px] shrink-0">{formatDateKey(a.event.date, { weekday: undefined })}</span>
+                    <span className="text-[12.5px] truncate flex-1">
+                      {a.event.opponent || a.event.title}
+                      <span className="text-faint"> · {a.event.isHome ? "thuis" : "uit"}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 shrink-0">
+                      <Shirt size={12} className="text-faint" />
+                      <span className="erp-mono text-[11px] text-faint">{a.member?.number !== null && a.member?.number !== undefined ? `#${a.member.number}` : "#?"}</span>
+                      <span className="text-[12.5px] font-semibold text-navy">{a.member ? shortName(a.member) : "—"}</span>
+                      {a.override && <Badge tone="warn">afw.</Badge>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Editor                                                               */
 /* ------------------------------------------------------------------ */
 
 function EventEditor({
   ev,
   cal,
+  team,
   weekends,
   onChange,
   onDelete,
@@ -655,6 +888,7 @@ function EventEditor({
 }: {
   ev: SeasonEvent;
   cal: SeasonCalendar;
+  team: TeamMember[];
   weekends: Weekend[];
   onChange: (patch: Partial<SeasonEvent>) => void;
   onDelete: () => void;
@@ -662,7 +896,8 @@ function EventEditor({
   onSyncWeekend: () => void;
 }) {
   const match = isMatch(ev);
-  const names = knownDriverNames(cal, ROSTER_FIRST_NAMES);
+  const names = knownDriverNames(cal, players(team).map(shortName));
+  const bag = match ? shirtBagFor(cal, team, ev.id) : null;
   const warnings = eventWarnings(ev);
   const linked = ev.weekendId ? weekends.find((w) => w.id === ev.weekendId) : undefined;
   const travel = travelMinutes(ev);
@@ -754,6 +989,16 @@ function EventEditor({
             <Field label="Zelf"><TextInput value={ev.ownTransport} onChange={(v) => onChange({ ownTransport: v })} placeholder="Wouter" /></Field>
           </div>
         </div>
+      )}
+
+      {match && (
+        <Field label="Shirttas" hint={bag && !bag.override ? `Volgens rooster: ${memberLabel(bag.member)}` : "Handmatige afwijking; het rooster schuift niet op."}>
+          <Select
+            value={ev.shirtBagMemberId}
+            onChange={(v) => onChange({ shirtBagMemberId: v })}
+            options={[{ value: "", label: `Volgens rooster${bag?.member ? ` (${shortName(bag.member)})` : ""}` }, ...rotationOrder(team).map((m) => ({ value: m.id, label: memberLabel(m) }))]}
+          />
+        </Field>
       )}
 
       <Field label="Notities"><textarea className="input min-h-[72px]" value={ev.notes} onChange={(e) => onChange({ notes: e.target.value })} /></Field>

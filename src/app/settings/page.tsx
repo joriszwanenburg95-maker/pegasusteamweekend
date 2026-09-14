@@ -82,9 +82,14 @@ export default function SystemSettingsPage() {
       setMessage({ tone: "nogo", text: "Veld “calendar” (seizoenskalender) ontbreekt." });
       return;
     }
+    if (!Array.isArray(candidate.team)) {
+      setMessage({ tone: "nogo", text: "Veld “team” (selectie) ontbreekt." });
+      return;
+    }
     const next: AppState = {
       version: candidate.version,
       weekends: candidate.weekends,
+      team: candidate.team,
       calendar: candidate.calendar,
       clockOverride: typeof candidate.clockOverride === "string" ? candidate.clockOverride : null,
     };

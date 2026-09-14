@@ -1,5 +1,6 @@
-import type { AppState, Participant, Weekend } from "@/lib/types";
+import type { AppState, Participant, TeamMember, Weekend } from "@/lib/types";
 import { SEASON_2026_2027 } from "./season";
+import { TEAM } from "./team";
 
 /**
  * Seeddata. Twee weekends:
@@ -10,35 +11,27 @@ import { SEASON_2026_2027 } from "./season";
  *  2. 3 OKTOBER 2026 — teamweekend na de uitwedstrijd tegen Sudosa (Assen, ronde 2).
  *     Wedstrijd en rijschema uit het programma; accommodatie/eten/avond zijn voorbeelddata.
  *
- * Selectie: publieke Heren 1-pagina (seizoen 2025/26) + "Job" uit de
- * vervoersvoorbeelden. Werk bij voor 2026/2027.
+ * Selectie: `src/data/team.ts` (14 spelers, trainer Bob, assistent Jac).
  */
 
-const ROSTER: { id: string; name: string; role: string }[] = [
-  { id: "p-dicky", name: "Dicky Kottink", role: "SV · #7" },
-  { id: "p-dean", name: "Dean Rots", role: "SV · #1" },
-  { id: "p-wouter", name: "Wouter van de Ven", role: "DIA · #8" },
-  { id: "p-senna-r", name: "Senna Renting", role: "DIA · #6" },
-  { id: "p-tom", name: "Tom Smeets", role: "MID · #5" },
-  { id: "p-koen", name: "Koen van den Borden", role: "MID · #9" },
-  { id: "p-boaz", name: "Boaz Dingemanse", role: "MID · #12" },
-  { id: "p-senna-m", name: "Senna Muller", role: "PL · #2" },
-  { id: "p-joris", name: "Joris Zwanenburg", role: "PL · #4" },
-  { id: "p-pepijn", name: "Pepijn Scholten", role: "PL · #3" },
-  { id: "p-rik", name: "Rik Reinders", role: "PL · #10" },
-  { id: "p-pim", name: "Pim Franken", role: "LIB · #13" },
-  { id: "p-job", name: "Job", role: "Chauffeur (Up)" },
-  { id: "p-bob", name: "Bob Soberjé", role: "Trainer" },
-];
+/** Rol-tekst voor een deelnemer, afgeleid van de selectie ("SV · #7", "Trainer"). */
+function memberRole(m: TeamMember): string {
+  if (m.role !== "player") return m.role === "trainer" ? "Trainer" : "Assistent";
+  const parts = [m.position, m.number !== null ? `#${m.number}` : ""].filter(Boolean);
+  return parts.join(" · ");
+}
+
+/** Staf gaat standaard niet mee op weekend. */
+const STAFF_DEFAULT: Partial<Participant> = { weekend: "notGoing", overnight: "notGoing", sunday: "notGoing", dinner: "notGoing" };
 
 function participants(
   overrides: Partial<Record<string, Partial<Participant>>> = {},
   base: Partial<Participant> = {},
 ): Participant[] {
-  return ROSTER.map((r) => ({
+  return TEAM.filter((m) => m.active).map((r) => ({
     id: r.id,
     name: r.name,
-    role: r.role,
+    role: memberRole(r),
     match: "going",
     weekend: "going",
     overnight: "going",
@@ -47,6 +40,7 @@ function participants(
     ownTransport: false,
     isDriver: false,
     ...base,
+    ...(r.role !== "player" ? STAFF_DEFAULT : {}),
     ...(overrides[r.id] ?? {}),
   }));
 }
@@ -82,7 +76,6 @@ export const MAASEIK: Weekend = {
     {
       "p-job": { isDriver: true },
       "p-senna-m": { isDriver: true },
-      "p-bob": { weekend: "notGoing", overnight: "notGoing", sunday: "notGoing", dinner: "notGoing", match: "notGoing" },
     },
     { match: "notGoing" },
   ),
@@ -173,7 +166,7 @@ export const MAASEIK: Weekend = {
       availableSeats: 4,
       cargoSize: "small",
       luggageLoad: "high",
-      passengerIds: ["p-pim", "p-rik"],
+      passengerIds: ["p-pim", "p-rik", "p-mathijs"],
       confirmed: true,
     },
     {
@@ -195,7 +188,7 @@ export const MAASEIK: Weekend = {
       availableSeats: 4,
       cargoSize: "medium",
       luggageLoad: "high",
-      passengerIds: ["p-boaz", "p-senna-r", "p-pepijn"],
+      passengerIds: ["p-boaz", "p-henk", "p-pepijn"],
       confirmed: true,
     },
   ],
@@ -306,7 +299,6 @@ export const OCTOBER_2026: Weekend = {
     "p-boaz": { isDriver: true },
     "p-senna-m": { ownTransport: true }, // carpoolt met Henk (rijschema)
     "p-koen": { weekend: "unknown", overnight: "unknown", sunday: "unknown", dinner: "unknown" },
-    "p-bob": { weekend: "notGoing", overnight: "notGoing", sunday: "notGoing", dinner: "notGoing" },
     "p-pepijn": { sunday: "notGoing" },
   }),
   accommodation: {
@@ -328,7 +320,7 @@ export const OCTOBER_2026: Weekend = {
     location: "Eetcafé bij het hostel (voorbeeld)",
     address: "",
     reserved: true,
-    reservedCount: 12,
+    reservedCount: 13,
     time: "22:45",
     travelMin: 8,
     durationMin: 75,
@@ -433,7 +425,7 @@ export const OCTOBER_2026: Weekend = {
       availableSeats: 4,
       cargoSize: "medium",
       luggageLoad: "medium",
-      passengerIds: ["p-senna-r", "p-koen"],
+      passengerIds: ["p-henk", "p-koen"],
       confirmed: true,
     },
     {
@@ -444,7 +436,7 @@ export const OCTOBER_2026: Weekend = {
       availableSeats: 4,
       cargoSize: "medium",
       luggageLoad: "medium",
-      passengerIds: ["p-job"],
+      passengerIds: ["p-job", "p-mathijs"],
       confirmed: false,
     },
   ],
@@ -456,7 +448,7 @@ export const OCTOBER_2026: Weekend = {
     { id: "c5", section: "beforeDeparture", label: "passagiers ingedeeld", ownerId: "p-joris", status: "inProgress", deadline: "2026-10-02T18:00:00.000Z" },
     { id: "c6", section: "beforeDeparture", label: "avondlocatie haalbaar", ownerId: null, status: "blocked", deadline: "2026-09-30T18:00:00.000Z" },
     { id: "c7", section: "access", label: "toegangscode / instructie hostel", ownerId: "p-joris", status: "open", deadline: "2026-10-02T12:00:00.000Z" },
-    { id: "c8", section: "teamEquipment", label: "shirttas", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
+    { id: "c8", section: "teamEquipment", label: "shirttas (rooster: #3 Pep)", ownerId: "p-pepijn", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
     { id: "c9", section: "teamEquipment", label: "ballen", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
     { id: "c10", section: "teamEquipment", label: "wedstrijdmateriaal (bidons, tape, EHBO)", ownerId: "p-pim", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
     { id: "c11", section: "teamEquipment", label: "chips van Rik bewaakt (les Maaseik)", ownerId: "p-rik", status: "open", deadline: "2026-10-03T12:00:00.000Z" },
@@ -474,7 +466,7 @@ export const OCTOBER_2026: Weekend = {
   ],
   decisions: [
     { id: "d1", at: "2026-09-08T19:00:00.000Z", topic: "accommodation", summary: "Hostel geboekt voor 14 bedden (voorbeeld)." },
-    { id: "d2", at: "2026-09-12T20:00:00.000Z", topic: "dinner", summary: "Eetcafé gereserveerd voor 12 personen om 22:45, na de wedstrijd (voorbeeld)." },
+    { id: "d2", at: "2026-09-12T20:00:00.000Z", topic: "dinner", summary: "Eetcafé gereserveerd voor 13 personen om 22:45, na de wedstrijd (voorbeeld)." },
     { id: "d3", at: "2026-09-14T12:00:00.000Z", topic: "transport", summary: "Rijschema overgenomen uit het programma: Wouter, Joris, Rik en Boaz rijden; Henk en Senna carpoolen; vertrek Ark 16:15." },
   ],
   sunday: {
@@ -578,12 +570,13 @@ export function blankWeekend(id: string, name: string, departureAt: string): Wee
   };
 }
 
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 7;
 
 export function seedState(): AppState {
   return {
     version: SEED_VERSION,
     weekends: [OCTOBER_2026, MAASEIK],
+    team: structuredClone(TEAM),
     calendar: structuredClone(SEASON_2026_2027),
     clockOverride: null,
   };

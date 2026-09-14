@@ -1,4 +1,4 @@
-import { MATCH_KINDS, type SeasonCalendar, type SeasonEvent, type SeasonEventKind, type TrainingSlot, type Weekend } from "../types";
+import { MATCH_KINDS, type SeasonCalendar, type SeasonEvent, type SeasonEventKind, type TeamMember, type TrainingSlot, type Weekend } from "../types";
 import { parseClock } from "./time";
 
 /**
@@ -348,6 +348,7 @@ export function blankEvent(id: string, date: string, kind: SeasonEventKind = "co
     ownTransport: "",
     cancelsTraining: false,
     weekendId: null,
+    shirtBagMemberId: "",
     notes: "",
   };
 }
@@ -365,4 +366,63 @@ export function formatMonth(monthKey: string): string {
 
 export function formatEuro(n: number): string {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
+}
+
+/* ---------- Selectie & shirttas ---------- */
+
+
+export function players(team: TeamMember[]): TeamMember[] {
+  return team.filter((m) => m.role === "player" && m.active);
+}
+
+/** Volgorde van het shirttas-rooster: op rugnummer oplopend, spelers zonder nummer achteraan op naam. */
+export function rotationOrder(team: TeamMember[]): TeamMember[] {
+  return [...players(team)].sort((a, b) => {
+    if (a.number !== null && b.number !== null) return a.number - b.number;
+    if (a.number !== null) return -1;
+    if (b.number !== null) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+export interface ShirtBagAssignment {
+  event: SeasonEvent;
+  member: TeamMember | null;
+  /** true = handmatig afwijkend van het rooster. */
+  override: boolean;
+}
+
+/**
+ * Wie neemt per wedstrijd de shirttas mee? Vanaf de eerste wedstrijd op/na `shirtBag.fromDate`
+ * begint `shirtBag.memberId`; daarna gaat het op rugnummer door. Een handmatige afwijking
+ * op één wedstrijd verschuift het rooster niet.
+ */
+export function shirtBagSchedule(cal: SeasonCalendar, team: TeamMember[]): ShirtBagAssignment[] {
+  const order = rotationOrder(team);
+  const list = matches(cal).filter((e) => e.date >= cal.shirtBag.fromDate);
+  if (order.length === 0) return list.map((event) => ({ event, member: null, override: false }));
+  let idx = Math.max(0, order.findIndex((m) => m.id === cal.shirtBag.memberId));
+  return list.map((event) => {
+    const scheduled = order[idx % order.length];
+    idx += 1;
+    const manual = event.shirtBagMemberId ? team.find((m) => m.id === event.shirtBagMemberId) ?? null : null;
+    return { event, member: manual ?? scheduled, override: manual !== null };
+  });
+}
+
+export function shirtBagFor(cal: SeasonCalendar, team: TeamMember[], eventId: string): ShirtBagAssignment | null {
+  return shirtBagSchedule(cal, team).find((a) => a.event.id === eventId) ?? null;
+}
+
+/** Wie is er nu aan de beurt (eerste wedstrijd op/na vandaag)? */
+export function nextShirtBag(cal: SeasonCalendar, team: TeamMember[], nowIso: string): ShirtBagAssignment | null {
+  const today = isoToDateKey(nowIso);
+  return shirtBagSchedule(cal, team).find((a) => eventSpan(a.event).to >= today) ?? null;
+}
+
+export function memberLabel(m: TeamMember | null): string {
+  if (!m) return "—";
+  const nick = (m.nickname ?? "").trim();
+  const name = nick ? `${nick} (${m.name})` : m.name;
+  return m.number !== null ? `#${m.number} ${name}` : name;
 }

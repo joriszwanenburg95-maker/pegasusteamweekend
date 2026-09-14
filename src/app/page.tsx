@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, BookOpenCheck, ShieldCheck, Tent, Trophy } from "lucide-react";
+import { ArrowRight, BookOpenCheck, ShieldCheck, Shirt, Tent, Trophy } from "lucide-react";
 import { useStore } from "@/store/store";
-import type { SeasonCalendar, Weekend } from "@/lib/types";
+import type { SeasonCalendar, TeamMember, Weekend } from "@/lib/types";
+import { shortName } from "@/data/team";
 import {
   analyzeCriticalPath,
   bobRiskIndex,
@@ -14,6 +15,7 @@ import {
   formatDate,
   formatDateKey,
   formatEuro,
+  shirtBagSchedule,
   travelCost,
   upcomingMatches,
   formatDateTime,
@@ -154,7 +156,7 @@ export default function ControlRoomPage() {
         />
       </div>
 
-      <ProgrammeStrip cal={state.calendar} weekends={state.weekends} now={now} />
+      <ProgrammeStrip cal={state.calendar} team={state.team} weekends={state.weekends} now={now} />
 
       <ReadinessBoard weekends={open} now={now} />
 
@@ -347,8 +349,9 @@ function EveningBar({ weekend }: { weekend: Weekend }) {
 /* ------------------------------------------------------------------ */
 
 /** Eerstvolgende wedstrijden uit het programma, met het verband naar een teamweekend. */
-function ProgrammeStrip({ cal, weekends, now }: { cal: SeasonCalendar; weekends: Weekend[]; now: string }) {
+function ProgrammeStrip({ cal, team, weekends, now }: { cal: SeasonCalendar; team: TeamMember[]; weekends: Weekend[]; now: string }) {
   const list = upcomingMatches(cal, now, 5);
+  const bags = new Map(shirtBagSchedule(cal, team).map((a) => [a.event.id, a]));
   return (
     <Card
       eyebrow={`Programma · ${cal.season}`}
@@ -384,6 +387,11 @@ function ProgrammeStrip({ cal, weekends, now }: { cal: SeasonCalendar; weekends:
                 {!ev.isHome && ev.roundTripKm > 0 && (
                   <div className={`erp-mono text-[10.5px] mt-1 ${i === 0 ? "text-white/60" : "text-faint"}`}>
                     {ev.roundTripKm} km · {formatEuro(travelCost(ev, cal.kmRate))}
+                  </div>
+                )}
+                {bags.get(ev.id)?.member && (
+                  <div className={`inline-flex items-center gap-1 text-[11px] mt-1 ${i === 0 ? "text-white/80" : "text-muted"}`}>
+                    <Shirt size={11} /> shirttas {shortName(bags.get(ev.id)!.member!)}
                   </div>
                 )}
                 {wk && (

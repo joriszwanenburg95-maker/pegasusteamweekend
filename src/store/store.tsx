@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
-import type { AppState, SeasonCalendar, SeasonEvent, Weekend } from "@/lib/types";
+import type { AppState, SeasonCalendar, SeasonEvent, TeamMember, Weekend } from "@/lib/types";
 import { SEED_VERSION, seedState } from "@/data/seed";
 
 const STORAGE_KEY = "pegasus-teamweekend-erp-v1";
@@ -14,6 +14,7 @@ type Action =
   | { type: "updateCalendar"; patch: (c: SeasonCalendar) => SeasonCalendar }
   | { type: "upsertEvent"; event: SeasonEvent }
   | { type: "deleteEvent"; id: string }
+  | { type: "updateTeam"; patch: (t: TeamMember[]) => TeamMember[] }
   | { type: "setClock"; iso: string | null }
   | { type: "reset" };
 
@@ -61,6 +62,8 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "deleteEvent":
       return { ...state, calendar: { ...state.calendar, events: state.calendar.events.filter((e) => e.id !== action.id) } };
+    case "updateTeam":
+      return { ...state, team: action.patch(state.team) };
     case "setClock":
       return { ...state, clockOverride: action.iso };
     case "reset":
@@ -80,6 +83,7 @@ interface StoreValue {
   upsertEvent: (event: SeasonEvent) => void;
   updateEvent: (id: string, patch: Partial<SeasonEvent>) => void;
   deleteEvent: (id: string) => void;
+  updateTeam: (patch: (t: TeamMember[]) => TeamMember[]) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -94,7 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as AppState;
-        if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.weekends) && parsed.calendar) {
+        if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.weekends) && parsed.calendar && Array.isArray(parsed.team)) {
           dispatch({ type: "hydrate", state: parsed });
         }
       }
@@ -142,12 +146,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
   const deleteEvent = useCallback((id: string) => dispatch({ type: "deleteEvent", id }), []);
+  const updateTeam = useCallback((patch: (t: TeamMember[]) => TeamMember[]) => dispatch({ type: "updateTeam", patch }), []);
 
   const now = state.clockOverride ?? new Date(tick).toISOString();
 
   const value = useMemo<StoreValue>(
-    () => ({ state, hydrated, now, dispatch, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent }),
-    [state, hydrated, now, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent],
+    () => ({ state, hydrated, now, dispatch, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent, updateTeam }),
+    [state, hydrated, now, updateWeekend, getWeekend, updateCalendar, upsertEvent, updateEvent, deleteEvent, updateTeam],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

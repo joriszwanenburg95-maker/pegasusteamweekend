@@ -109,6 +109,15 @@ const LABELS: Record<string, string> = {
   teamweekend: "Teamweekend",
   meeting: "Teambespreking",
   holiday: "Vrij / vakantie",
+  // Selectie
+  player: "Speler",
+  trainer: "Trainer",
+  assistant: "Assistent",
+  SV: "Spelverdeler",
+  PL: "Passer-loper",
+  MID: "Midden",
+  DIA: "Diagonaal",
+  LIB: "Libero",
 };
 
 /** Vertaal een interne code naar een Nederlands label; onbekende codes komen ongewijzigd terug. */

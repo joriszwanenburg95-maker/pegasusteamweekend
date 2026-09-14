@@ -22,6 +22,7 @@ import {
 } from "@/lib/engine";
 import type { Vehicle } from "@/lib/types";
 import { SEASON_2026_2027 } from "@/data/season";
+import { TEAM, shortName } from "@/data/team";
 import {
   applyEventToWeekend,
   cityFromAddress,
@@ -39,6 +40,10 @@ import {
   trainingsOn,
   travelCost,
   upcomingMatches,
+  players,
+  rotationOrder,
+  shirtBagSchedule,
+  nextShirtBag,
 } from "@/lib/engine";
 
 const NOW = "2026-09-14T12:00:00.000Z";
@@ -70,17 +75,17 @@ describe("transport capacity 2.0", () => {
 describe("headcount lock", () => {
   it("distinguishes match / weekend / overnight / sunday / dinner attendance", () => {
     const hc = headcount(OCTOBER_2026);
-    expect(hc.weekend.going).toBe(12);
+    expect(hc.weekend.going).toBe(13); // 14 spelers, Koen onbekend; Bob en Jac gaan niet mee
     expect(hc.weekend.unknown).toBe(1);
-    expect(hc.overnight.going).toBe(12);
-    expect(hc.sunday.going).toBe(11);
+    expect(hc.overnight.going).toBe(13);
+    expect(hc.sunday.going).toBe(12);
     expect(hc.locked).toBe(false);
   });
   it("flags dinner capacity mismatch when reserved < confirmed", () => {
     const hc = headcount(OCTOBER_2026);
     const dinner = hc.mismatches.find((m) => m.key === "dinner")!;
-    expect(dinner.reserved).toBe(12);
-    expect(dinner.confirmed).toBe(12);
+    expect(dinner.reserved).toBe(13);
+    expect(dinner.confirmed).toBe(13);
     const w = { ...OCTOBER_2026, dinner: { ...OCTOBER_2026.dinner, reservedCount: 10 } };
     expect(headcount(w).mismatches.find((m) => m.key === "dinner")!.status).toBe("CAPACITY MISMATCH");
   });
@@ -321,5 +326,42 @@ describe("seizoenskalender", () => {
     expect(late.map((d) => d.topic).sort()).toEqual(["dinner", "nightlife"]);
     expect(MAASEIK.decisions[0].at.startsWith("2026-05-01")).toBe(true);
     expect(MAASEIK.retrospective.operational.transportIssues).toBe(0);
+  });
+});
+
+describe("selectie & shirttas", () => {
+  it("14 spelers, trainer Bob en assistent Jac; Senna Renting is weg", () => {
+    expect(players(TEAM)).toHaveLength(14);
+    expect(TEAM.find((m) => m.role === "trainer")?.name).toMatch(/Bob/);
+    expect(TEAM.find((m) => m.role === "assistant")?.name).toBe("Jac");
+    expect(TEAM.some((m) => /Renting/.test(m.name))).toBe(false);
+    expect(shortName(TEAM.find((m) => m.id === "p-tom")!)).toBe("Smeets");
+    expect(shortName(TEAM.find((m) => m.id === "p-mathijs")!)).toBe("Matta");
+  });
+
+  it("rooster op rugnummer, spelers zonder nummer achteraan", () => {
+    const order = rotationOrder(TEAM).map(shortName);
+    expect(order.slice(0, 11)).toEqual(["Dean", "Senna", "Pep", "Joris", "Smeets", "Dicky", "Wouter", "Koen", "Rik", "Boaz", "Pim"]);
+    expect(order.slice(11).sort()).toEqual(["Henk", "Job", "Matta"]);
+  });
+
+  it("Dean is aan de beurt voor Inter Rijswijk (19-9), dan Senna (Peelpush) en Pep (Sudosa)", () => {
+    const s = shirtBagSchedule(SEASON_2026_2027, TEAM);
+    expect(s[0].event.opponent).toBe("Inter Rijswijk");
+    expect(shortName(s[0].member!)).toBe("Dean");
+    expect(shortName(s[1].member!)).toBe("Senna");
+    expect(s[2].event.opponent).toBe("Sudosa");
+    expect(shortName(s[2].member!)).toBe("Pep");
+    expect(nextShirtBag(SEASON_2026_2027, TEAM, NOW)?.member?.id).toBe("p-dean");
+    // Na 14 spelers begint Dean opnieuw.
+    expect(s[14].member?.id).toBe("p-dean");
+  });
+
+  it("een handmatige afwijking verschuift het rooster niet", () => {
+    const cal = { ...SEASON_2026_2027, events: SEASON_2026_2027.events.map((e) => (e.id === "e-r1" ? { ...e, shirtBagMemberId: "p-pim" } : e)) };
+    const s = shirtBagSchedule(cal, TEAM);
+    expect(s[1].member?.id).toBe("p-pim");
+    expect(s[1].override).toBe(true);
+    expect(s[2].member?.id).toBe("p-pepijn");
   });
 });
