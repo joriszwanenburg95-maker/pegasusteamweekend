@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
+/*
+  Pegasus HS1 Teamweekend Control Room — design tokens.
+  Clubkleuren afgeleid van pegasusvolleybal.com (WordPress theme):
+    --wp--preset--color--custom-prussian-blue: #000d44  (koppen, nav, footer)
+    accent lichtblauw:                          #77aadf  (links, knoppen)
+  Font: Poppins (site). Overige tinten zijn ERP-fallback (cobalt/royal blue),
+  geen officiële brand-hexcodes.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --pegasus-navy: #000d44;        /* officieel: custom-prussian-blue */
+  --pegasus-navy-2: #001a6e;
+  --pegasus-cobalt: #0a3fb8;      /* fallback: dominant Pegasus/cobalt blue */
+  --pegasus-royal: #2563eb;       /* fallback: royal/electric blue */
+  --pegasus-sky: #77aadf;         /* officieel accent lichtblauw */
+  --pegasus-silver: #b5bdbc;      /* logo-grijs (site: accent-5) */
+
+  --bg: #f4f6fb;
+  --bg-elev: #ffffff;
+  --bg-sunken: #e9edf6;
+  --fg: #0b1230;
+  --fg-muted: #4b5677;
+  --fg-faint: #7d879f;
+  --line: #d9dfec;
+  --line-strong: #b9c3d9;
+
+  --go: #15803d;
+  --go-bg: #dcfce7;
+  --warn: #b45309;
+  --warn-bg: #fef3c7;
+  --nogo: #b91c1c;
+  --nogo-bg: #fee2e2;
+  --unknown: #475569;
+  --unknown-bg: #e2e8f0;
+
+  --radius: 6px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-navy: var(--pegasus-navy);
+  --color-navy-2: var(--pegasus-navy-2);
+  --color-cobalt: var(--pegasus-cobalt);
+  --color-royal: var(--pegasus-royal);
+  --color-sky: var(--pegasus-sky);
+  --color-silver: var(--pegasus-silver);
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-sunken: var(--bg-sunken);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-faint: var(--fg-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-go: var(--go);
+  --color-go-bg: var(--go-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-nogo: var(--nogo);
+  --color-nogo-bg: var(--nogo-bg);
+  --color-unknown: var(--unknown);
+  --color-unknown-bg: var(--unknown-bg);
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --radius-erp: var(--radius);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html, body { height: 100%; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ERP-typografie: labels in caps, mono voor cijfers */
+.erp-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-faint);
+}
+.erp-mono { font-family: var(--font-mono), ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.card-navy {
+  background: linear-gradient(160deg, var(--pegasus-navy) 0%, var(--pegasus-navy-2) 100%);
+  color: #fff;
+  border: 1px solid #0a1f6e;
+  border-radius: var(--radius);
+}
+.card-navy .erp-label { color: rgba(255,255,255,0.55); }
+
+.input {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  color: var(--fg);
+}
+.input:focus { outline: 2px solid var(--pegasus-royal); outline-offset: 0; border-color: var(--pegasus-royal); }
+.input[type="checkbox"] { width: 1rem; height: 1rem; padding: 0; accent-color: var(--pegasus-cobalt); }
+select.input { padding-right: 1.6rem; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem; font-weight: 600;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  background: #fff; color: var(--fg);
+  cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--bg-sunken); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--pegasus-cobalt); border-color: var(--pegasus-cobalt); color: #fff; }
+.btn-primary:hover { background: var(--pegasus-navy-2); }
+.btn-danger { color: var(--nogo); border-color: #f3b4b4; }
+.btn-danger:hover { background: var(--nogo-bg); }
+.btn-sm { padding: 0.25rem 0.55rem; font-size: 0.72rem; }
+
+table.erp { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+table.erp th { text-align: left; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-faint); font-weight: 600; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); background: var(--bg-sunken); }
+table.erp td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.erp tr:last-child td { border-bottom: 0; }
+
+.nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.82rem; color: rgba(255,255,255,0.72); }
+.nav-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-link.active { background: rgba(119,170,223,0.18); color: #fff; box-shadow: inset 3px 0 0 var(--pegasus-sky); }
+
+.tab { padding: 0.55rem 0.85rem; font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab:hover { color: var(--fg); }
+.tab.active { color: var(--pegasus-cobalt); border-bottom-color: var(--pegasus-cobalt); }
+
+.stripe { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 8px, transparent 8px 16px); }
+
+@keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+.live-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
